@@ -1,0 +1,91 @@
+﻿from pathlib import Path
+
+def w(path, text):
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text, encoding="utf-8")
+    print(f"wrote {path}")
+
+# ── TopBar component ────────────────────────────────────────────────────────
+w("frontend/src/components/TopBar.tsx", (
+    "import React, { useState, useEffect } from 'react';\n"
+    "import { useStore } from '../state/store';\n\n"
+    "function UtcClock() {\n"
+    "  const [time, setTime] = useState(new Date());\n"
+    "  useEffect(() => {\n"
+    "    const t = setInterval(() => setTime(new Date()), 1000);\n"
+    "    return () => clearInterval(t);\n"
+    "  }, []);\n"
+    "  return <span className=\"topbar-time\">{time.toISOString().replace('T',' ').slice(0,19)} UTC</span>;\n"
+    "}\n\n"
+    "interface TopBarProps { health?: Record<string,string>; }\n\n"
+    "export default function TopBar({ health }: TopBarProps) {\n"
+    "  const { dataMode, selectedSpillId } = useStore();\n"
+    "  return (\n"
+    "    <header className=\"topbar app-topbar\">\n"
+    "      <div className=\"topbar-brand\">\n"
+    "        <div>\n"
+    "          <div className=\"topbar-brand-name\">OILTRACE AI</div>\n"
+    "          <div className=\"topbar-brand-id mono\">SIH26143</div>\n"
+    "        </div>\n"
+    "        <div style={{marginLeft:8, borderLeft:'1px solid var(--border)', paddingLeft:8}}>\n"
+    "          <div className=\"topbar-brand-desc\">MARITIME INCIDENT INVESTIGATION</div>\n"
+    "          <div style={{fontSize:'10px',color:'var(--text-disabled)'}}>Detect &bull; Reconstruct &bull; Correlate &bull; Explain</div>\n"
+    "        </div>\n"
+    "      </div>\n"
+    "      <div className=\"topbar-incident\">\n"
+    "        {selectedSpillId ? selectedSpillId : 'No incident selected'}\n"
+    "      </div>\n"
+    "      <div className=\"topbar-right\">\n"
+    "        <div className={'mode-badge ' + (dataMode === 'simulation' ? 'mode-badge--sim' : 'mode-badge--real')}>\n"
+    "          <div className=\"mode-dot\"/>\n"
+    "          {dataMode === 'simulation' ? 'SIMULATION MODE' : 'REAL DATA'}\n"
+    "        </div>\n"
+    "        {health && (\n"
+    "          <div style={{display:'flex',gap:4,alignItems:'center'}}>\n"
+    "            {Object.entries(health).slice(0,3).map(([k,v]) => (\n"
+    "              <div key={k} title={k + ': ' + v} style={{width:7,height:7,borderRadius:'50%',background: v==='online'?'var(--status-success)':v==='precomputed_demo'?'var(--mode-sim)':'var(--status-warning)'}} />\n"
+    "            ))}\n"
+    "          </div>\n"
+    "        )}\n"
+    "        <UtcClock />\n"
+    "      </div>\n"
+    "    </header>\n"
+    "  );\n"
+    "}\n"
+))
+
+# ── NavigationRail component ────────────────────────────────────────────────
+w("frontend/src/components/NavigationRail.tsx", (
+    "import React from 'react';\n"
+    "import { NavLink } from 'react-router-dom';\n\n"
+    "const NAV_ITEMS = [\n"
+    "  { to: '/', label: 'Command Center', icon: 'CC' },\n"
+    "  { to: '/incidents', label: 'Incidents', icon: 'IN' },\n"
+    "  { to: '/analyze', label: 'Analyze', icon: 'AN' },\n"
+    "  { to: '/incidents/SIH-2024-001/vessels', label: 'Vessel Investigation', icon: 'VI' },\n"
+    "  { to: '/incidents/SIH-2024-001/timeline', label: 'Digital Twin', icon: 'DT' },\n"
+    "  { to: '/incidents/SIH-2024-001/report', label: 'Reports', icon: 'RP' },\n"
+    "  { to: '/settings', label: 'Settings', icon: 'ST' },\n"
+    "];\n\n"
+    "export default function NavigationRail() {\n"
+    "  return (\n"
+    "    <nav className=\"nav-rail app-nav\">\n"
+    "      <div className=\"nav-section-label\">Navigation</div>\n"
+    "      {NAV_ITEMS.map(item => (\n"
+    "        <NavLink key={item.to} to={item.to} end={item.to==='/'}\n"
+    "          className={({isActive}) => 'nav-item' + (isActive ? ' nav-item--active' : '')}>\n"
+    "          <span style={{fontFamily:'var(--font-mono)',fontSize:'10px',fontWeight:600,color:'inherit',opacity:0.7,width:16,textAlign:'center',flexShrink:0}}>{item.icon}</span>\n"
+    "          <span className=\"nav-item__label\">{item.label}</span>\n"
+    "        </NavLink>\n"
+    "      ))}\n"
+    "      <div className=\"nav-divider\" style={{marginTop:'auto'}} />\n"
+    "      <div style={{padding:'8px 16px',fontSize:'10px',color:'var(--text-disabled)',fontFamily:'var(--font-mono)'}}>\n"
+    "        v1.0.0<br/>NTRO SIH26143\n"
+    "      </div>\n"
+    "    </nav>\n"
+    "  );\n"
+    "}\n"
+))
+
+print("TopBar + NavRail done")

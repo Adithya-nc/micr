@@ -1,0 +1,94 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+
+:root {
+  /* ── Base Surfaces ── */
+  --bg-primary:      #0B0F14;
+  --bg-secondary:    #10151B;
+  --surface-1:       #151B22;
+  --surface-2:       #19212A;
+  --surface-3:       #1D2731;
+
+  /* ── Borders ── */
+  --border:          #232B34;
+  --border-strong:   #34404C;
+
+  /* ── Text ── */
+  --text-primary:    #E6EAEE;
+  --text-secondary:  #A7B0BA;
+  --text-muted:      #7F8A96;
+  --text-disabled:   #59636E;
+
+  /* ── Accent ── */
+  --accent:          #3FA7D6;
+  --accent-hover:    #2E96C5;
+  --accent-dim:      rgba(63,167,214,0.12);
+
+  /* ── Oil Data ── */
+  --oil:             #F59E0B;
+  --oil-strong:      #F97316;
+  --oil-fill:        rgba(245,158,11,0.28);
+  --oil-outline:     #FFB020;
+
+  /* ── Origin / Uncertainty ── */
+  --origin:          #7C8FA6;
+  --origin-fill:     rgba(124,143,166,0.22);
+  --uncertainty:     #8FA3B8;
+
+  /* ── Data Provenance ── */
+  --reconstructed:   #6F879C;
+  --predicted:       #A8B7C5;
+  --synthetic:       #C8A45D;
+  --observed:        #5F9E7A;
+
+  /* ── Vessel Correlation ── */
+  --corr-high:       #D97706;
+  --corr-med-high:   #B8892D;
+  --corr-med:        #7D8A96;
+  --corr-low:        #59636E;
+
+  /* ── Status ── */
+  --status-success:  #5F9E7A;
+  --status-warning:  #C9A24E;
+  --status-error:    #C95C5C;
+  --status-info:     #5E91B3;
+
+  /* ── Mode Indicators ── */
+  --mode-sim:        #C8A45D;
+  --mode-real:       #5F9E7A;
+
+  /* ── Typography ── */
+  --font-sans:       'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono:       'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ── Font Sizes ── */
+  --text-xs:   11px;
+  --text-sm:   12px;
+  --text-base: 14px;
+  --text-md:   15px;
+  --text-lg:   17px;
+  --text-xl:   20px;
+  --text-2xl:  26px;
+
+  /* ── Spacing (8px grid) ── */
+  --sp-1: 8px;
+  --sp-2: 16px;
+  --sp-3: 24px;
+  --sp-4: 32px;
+  --sp-5: 40px;
+  --sp-6: 48px;
+
+  /* ── Radius ── */
+  --radius-sm:  2px;
+  --radius:     4px;
+  --radius-md:  6px;
+
+  /* ── Nav ── */
+  --nav-width:     220px;
+  --topbar-height: 56px;
+
+  /* ── Transitions ── */
+  --transition-fast:  150ms ease;
+  --transition-base:  200ms ease;
+  --transition-map:   350ms ease;
+}
