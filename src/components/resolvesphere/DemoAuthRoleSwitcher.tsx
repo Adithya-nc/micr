@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { roleLabels, useDemoAuth, type DemoRole } from '@/lib/demoAuth'
 
-const roles: DemoRole[] = ['customer', 'support_agent', 'manager', 'admin']
+const roles: DemoRole[] = [ 'support_agent', 'manager', 'admin']
 
 export function DemoAuthRoleSwitcher({ compact = false }: { compact?: boolean }) {
   const { role, setRole } = useDemoAuth()
