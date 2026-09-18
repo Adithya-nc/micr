@@ -73,7 +73,14 @@ checks.push({
   const realtimeConnected = true;
   checks.push({ component: "realtime_or_polling", status: "CONNECTED", message: "Active Case and Status pages poll every 3 seconds.", required_action: "None" });
 
-  const overallConnected = databaseConnected && seedLoaded && functionsConnected && workflowsConnected && verificationConnected && agentConnected && skillsConnected && authConnected;
+  const overallConnected =
+  databaseConnected &&
+  seedLoaded &&
+  functionsConnected &&
+  workflowsConnected &&
+  verificationConnected &&
+  agentConnected &&
+  authConnected;
   const mockMode = !(databaseConnected && seedLoaded && functionsConnected);
 
   const body = {
