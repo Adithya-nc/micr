@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const QWEN_MODEL = "alibaba/qwen-3.8-max";
+const QWEN_MODEL = "alibaba/qwen-3.7-plus";
 
 const QWEN_SYSTEM_PROMPT = `You are SK-04 Resolution Proposal for ResolveSphere AI.
 You are a bounded reasoning component. You have NO write authority and MUST NOT claim that an action was executed.

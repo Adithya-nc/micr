@@ -1,38 +1,44 @@
 import type { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { AlertTriangle, BookOpen, ChartLine, LayoutDashboard, Inbox, Settings, ShieldCheck } from 'lucide-react'
+import { Link, useLocation, Navigate } from 'react-router-dom'
+import { AlertTriangle, BookOpen, ChartLine, LayoutDashboard, Inbox, Settings, ShieldCheck, LogOut } from 'lucide-react'
 import { FooterBar } from '@/components/resolvesphere/FooterBar'
-import { AccessRestrictedPanel } from '@/components/resolvesphere/AccessRestrictedPanel'
 import { ThemeToggle } from '@/components/resolvesphere/ThemeToggle'
-import { DemoAuthRoleSwitcher } from '@/components/resolvesphere/DemoAuthRoleSwitcher'
-import { canAccess, useDemoAuth, type PageKey } from '@/lib/demoAuth'
+import { useAuth } from '@/lib/auth'
 
-const navigation: { label: string; icon: typeof LayoutDashboard; path: string; page: PageKey }[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/app', page: 'command-center' },
-  { label: 'Active Cases', icon: Inbox, path: '/app/cases', page: 'active-case' },
-  { label: 'Escalations', icon: AlertTriangle, path: '/escalations', page: 'escalations' },
-  { label: 'Knowledge Base', icon: BookOpen, path: '/knowledge', page: 'escalations' },
-  { label: 'Analytics', icon: ChartLine, path: '/radar', page: 'radar' },
-  { label: 'Settings', icon: Settings, path: '/settings', page: 'command-center' },
+const navigation: { label: string; icon: typeof LayoutDashboard; path: string; page: string; roles: string[] }[] = [
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/app', page: 'command-center', roles: ['support_agent', 'manager'] },
+  { label: 'Active Cases', icon: Inbox, path: '/app/cases', page: 'active-case', roles: ['support_agent', 'manager'] },
+  { label: 'Escalations', icon: AlertTriangle, path: '/escalations', page: 'escalations', roles: ['support_agent', 'manager'] },
+  { label: 'Knowledge Base', icon: BookOpen, path: '/knowledge', page: 'knowledge', roles: ['support_agent', 'manager'] },
+  { label: 'Analytics', icon: ChartLine, path: '/radar', page: 'radar', roles: ['manager'] },
+  { label: 'Settings', icon: Settings, path: '/settings', page: 'settings', roles: ['support_agent', 'manager'] },
 ]
 
-export function AppShell({ page, title, subtitle, actions, children }: { page: PageKey; title: string; subtitle?: string; actions?: ReactNode; children: ReactNode }) {
+export function AppShell({ page, title, subtitle, actions, children }: { page: string; title: string; subtitle?: string; actions?: ReactNode; children: ReactNode }) {
   const { pathname } = useLocation()
-  const { role } = useDemoAuth()
-  const allowed = canAccess(role, page)
+  const { user, role, signOut } = useAuth()
+
+  if (!user || !role) {
+    return <Navigate to="/login" replace />
+  }
+
+  const navItem = navigation.find((n) => n.page === page)
+  if (navItem && !navItem.roles.includes(role)) {
+    return <Navigate to="/app" replace />
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <div className="grid min-h-screen lg:grid-cols-[15rem_minmax(0,1fr)]">
         <aside className="border-b bg-card lg:border-b-0 lg:border-r">
           <div className="border-b px-5 py-4">
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/app" className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary" />
               <span className="font-semibold">ResolveSphere</span>
             </Link>
           </div>
           <nav aria-label="Primary" className="flex gap-1 overflow-x-auto p-3 lg:flex-col">
-            {navigation.map((item) => {
+            {navigation.filter((item) => item.roles.includes(role)).map((item) => {
               const Icon = item.icon
               const active = pathname === item.path
               return (
@@ -57,12 +63,16 @@ export function AppShell({ page, title, subtitle, actions, children }: { page: P
             </div>
             <div className="flex items-center gap-3">
               {actions}
-              <DemoAuthRoleSwitcher compact />
+              <span className="text-xs text-muted-foreground">{user.email}</span>
               <ThemeToggle />
+              <button onClick={signOut} className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted">
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </button>
             </div>
           </header>
           <main className="mx-auto w-full max-w-[1600px] flex-1 p-5">
-            {allowed ? children : <AccessRestrictedPanel role={role} page={page} />}
+            {children}
           </main>
           <FooterBar />
         </div>

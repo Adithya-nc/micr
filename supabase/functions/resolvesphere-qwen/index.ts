@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const QWEN_MODEL = "alibaba/qwen-3.8-max";
+const QWEN_MODEL = "alibaba/qwen-3.7-plus";
 const ENTER_PROJECT_ID = "70c32d0a6eb24783a12e5edabe9d40c7";
 
 const ContractSchema = z.object({
@@ -121,7 +121,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const QWEN_MODEL = "alibaba/qwen-3.8-max";
+const QWEN_MODEL = "alibaba/qwen-3.7-plus";
 const ENTER_PROJECT_ID = "70c32d0a6eb24783a12e5edabe9d40c7";
 
 const ContractSchema = z.object({
@@ -237,7 +237,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const QWEN_MODEL = "alibaba/qwen-3.8-max";
+const QWEN_MODEL = "alibaba/qwen-3.7-plus";
 const ENTER_PROJECT_ID = "70c32d0a6eb24783a12e5edabe9d40c7";
 
 const ContractSchema = z.object({
@@ -353,7 +353,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const QWEN_MODEL = "alibaba/qwen-3.8-max";
+const QWEN_MODEL = "alibaba/qwen-3.7-plus";
 const ENTER_PROJECT_ID = "70c32d0a6eb24783a12e5edabe9d40c7";
 
 const ContractSchema = z.object({
