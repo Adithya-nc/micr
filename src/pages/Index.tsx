@@ -1,17 +1,65 @@
-import { useState } from 'react'
-import { Activity, AlertTriangle, ClipboardCheck, FileSearch, LayoutDashboard, ListChecks, Radar, ShieldCheck, SlidersHorizontal } from 'lucide-react'
-import { Evidence, statusTone, StatusTone } from '@/lib/resolvesphere'
+import { Link } from 'react-router-dom'
+import { LandingHeader, LandingSection } from '@/components/resolvesphere/LandingHeader'
+import { PrinciplePanel } from '@/components/resolvesphere/PrinciplePanel'
+import { ArchitectureBoundaryPanel } from '@/components/resolvesphere/ArchitectureBoundaryPanel'
+import { DemoScenarioPanel } from '@/components/resolvesphere/DemoScenarioPanel'
+import { BackendStatusPanel } from '@/components/resolvesphere/BackendStatusPanel'
+import { FooterBar } from '@/components/resolvesphere/FooterBar'
+import { Button } from '@/components/ui/button'
 
-const navigation = [{label:'Command Center',icon:LayoutDashboard},{label:'Active Case',icon:FileSearch},{label:'Escalations',icon:AlertTriangle},{label:'Approvals',icon:ClipboardCheck},{label:'Root-Cause Radar',icon:Radar},{label:'Testing / Admin',icon:SlidersHorizontal}]
-const gates = ['Schema Validation','Evidence Validation','Evidence Sufficiency','Evidence Freshness','Contradiction Check','Policy Guard','Risk Engine','Authorization']
-const metrics = ['Active cases','Investigating','Awaiting human','Verifying','Resolved','Reopened','Escalated','Incident candidates']
+const scenarios = [
+  { name: 'Scenario 1: Autonomous Success', description: 'Successful payment with a missing order triggers an autonomous, verified refund.' },
+  { name: 'Scenario 2: Evidence Gap', description: 'Ambiguous refund evidence triggers one targeted customer question.' },
+  { name: 'Scenario 3: Contradiction / Human Escalation', description: 'Conflicting refund status across systems blocks autonomy and escalates.' },
+  { name: 'Scenario 4: Systemic Root-Cause Detection', description: 'Recurring order failures correlate with a deployment event as an incident candidate.' },
+]
 
-function Status({value,tone}:{value:string,tone?:StatusTone}) { const color = tone ?? statusTone(value); const styles={neutral:'bg-muted text-muted-foreground',info:'bg-accent text-accent-foreground',success:'bg-[hsl(var(--success)/.12)] text-[hsl(var(--success))]',warning:'bg-[hsl(var(--warning)/.12)] text-[hsl(var(--warning))]',danger:'bg-destructive/10 text-destructive'}[color]; return <span className={`inline-flex items-center rounded-sm px-2 py-1 text-xs font-medium ${styles}`}>{value}</span> }
-function Panel({title,children,action}:{title:string;children:React.ReactNode;action?:React.ReactNode}) { return <section className="rounded-lg border bg-card"><header className="flex items-center justify-between border-b px-4 py-3"><h2 className="text-sm font-semibold">{title}</h2>{action}</header><div className="p-4">{children}</div></section> }
-function Empty({children}:{children:string}) { return <p className="py-5 text-sm text-muted-foreground">{children}</p> }
-function PlaceholderTable({children}:{children:string}) { return <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-3 py-2">Record</th><th className="px-3 py-2">State</th><th className="px-3 py-2">Updated</th></tr></thead><tbody><tr><td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">{children}</td></tr></tbody></table></div> }
-function Journey() { return <div className="flex flex-wrap items-center gap-2 text-xs font-medium"><span>Customer claim</span><span className="text-muted-foreground">→</span><span>Evidence</span><span className="text-muted-foreground">→</span><span>Decision</span><span className="text-muted-foreground">→</span><span>Policy</span><span className="text-muted-foreground">→</span><span>Risk / authorization</span><span className="text-muted-foreground">→</span><span>Action</span><span className="text-muted-foreground">→</span><span>Verification</span></div> }
-function EvidenceLedger({onSelect}:{onSelect:(e:Evidence)=>void}) { void onSelect; return <Panel title="Evidence Ledger"><PlaceholderTable>No evidence retrieved yet.</PlaceholderTable></Panel> }
-function ActiveCase() { const [provenance,setProvenance]=useState<Evidence | null>(null); return <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]"><main className="space-y-4"><header className="rounded-lg border bg-card px-4 py-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Case Investigation</p><h1 className="mt-1 text-xl font-semibold">No active case selected</h1></div><Status value="Backend data pending" tone="warning" /></div><p className="mt-3 text-sm text-muted-foreground">Select a case after the Enter Cloud backend is deployed.</p></header><Panel title="Resolution Journey"><Journey /></Panel><Panel title="Investigation Timeline"><Empty>Loading case events requires an active backend case.</Empty></Panel><EvidenceLedger onSelect={setProvenance}/><Panel title="Resolution Proposal"><Empty>No validated Resolution Contract is available.</Empty></Panel><Panel title="Trust Layer"><div className="grid gap-2 sm:grid-cols-2">{gates.map(g=><div key={g} className="flex items-center justify-between border px-3 py-2 text-sm"><span>{g}</span><Status value="Pending" tone="neutral" /></div>)}</div></Panel><div className="grid gap-4 md:grid-cols-2"><Panel title="Action Execution"><Empty>No authorized action.</Empty></Panel><Panel title="Verification"><Empty>Waiting for backend verification.</Empty></Panel></div><Panel title="Resolution Passport"><Empty>No passport generated.</Empty></Panel></main><aside className="space-y-4"><Panel title="Case Twin"><Empty>Minimum necessary context appears here after reconstruction.</Empty></Panel><Panel title="Customer Journey"><Empty>No customer journey data.</Empty></Panel><Panel title="Properties"><Empty>No selected case properties.</Empty></Panel></aside>{provenance && <div role="dialog" aria-label="Evidence provenance" className="fixed inset-0 grid place-items-center bg-foreground/20 p-4"><div className="w-full max-w-md rounded-lg border bg-card p-5"><h2 className="text-base font-semibold">Provenance</h2><dl className="mt-4 space-y-2 text-sm"><div><dt className="text-muted-foreground">Fact</dt><dd>{provenance.field_name || 'Source information unavailable.'}</dd></div><div><dt className="text-muted-foreground">Source</dt><dd>{provenance.source_system}</dd></div><div><dt className="text-muted-foreground">Record</dt><dd>{provenance.source_record_id}</dd></div><div><dt className="text-muted-foreground">Retrieval method</dt><dd>{provenance.retrieval_method}</dd></div></dl><button onClick={()=>setProvenance(null)} className="mt-5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">Close</button></div></div>}</div> }
-function Content({page}:{page:string}) { if(page==='Active Case') return <ActiveCase/>; if(page==='Command Center') return <><header><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Operations overview</p><h1 className="mt-1 text-2xl font-semibold">Command Center</h1><p className="mt-2 text-sm text-muted-foreground">All operational counts are loaded from Enter Cloud. No metrics are shown until data is available.</p></header><div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(x=><Panel key={x} title={x}><p className="text-2xl font-semibold text-muted-foreground">—</p><p className="mt-1 text-xs text-muted-foreground">Backend data pending</p></Panel>)}</div><div className="mt-4"><Panel title="Case queue" action={<Status value="SYNTHETIC data only" tone="info"/>}><PlaceholderTable>No cases returned by the backend.</PlaceholderTable></Panel></div></>; const label=page==='Root-Cause Radar'?'No systemic patterns detected in the available data.':page==='Approvals'?'No approvals pending.':page==='Escalations'?'No escalated cases.':'No test results recorded.'; return <><header><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">ResolveSphere AI</p><h1 className="mt-1 text-2xl font-semibold">{page}</h1></header><div className="mt-5"><Panel title={page}><Empty>{label}</Empty></Panel></div></> }
-export default function Index(){ const [page,setPage]=useState('Command Center'); return <div className="min-h-screen bg-background"><div className="grid min-h-screen lg:grid-cols-[15rem_minmax(0,1fr)]"><aside className="border-b bg-card lg:border-b-0 lg:border-r"><div className="border-b px-5 py-5"><div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary"/><span className="font-semibold">ResolveSphere</span></div><p className="mt-1 text-xs text-muted-foreground">Evidence-driven resolution</p></div><nav aria-label="Primary" className="flex gap-1 overflow-x-auto p-3 lg:flex-col">{navigation.map(item=>{const Icon=item.icon; const active=page===item.label; return <button key={item.label} onClick={()=>setPage(item.label)} className={`flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${active?'bg-accent text-accent-foreground':'text-muted-foreground hover:bg-muted hover:text-foreground'}`}><Icon className="h-4 w-4"/>{item.label}</button>})}</nav><div className="hidden border-t p-4 text-xs text-muted-foreground lg:block">[DEMO ENVIRONMENT]<br/>Synthetic enterprise data only</div></aside><div className="min-w-0"><header className="flex items-center justify-between border-b bg-card px-5 py-3"><div className="flex items-center gap-2 text-sm"><Activity className="h-4 w-4 text-primary"/><span>Control Plane</span><Status value="Backend pending" tone="warning"/></div><div className="flex items-center gap-2 text-xs text-muted-foreground"><ListChecks className="h-4 w-4"/>Case events are authoritative</div></header><div className="mx-auto max-w-[1600px] p-5"><Content page={page}/></div></div></div></div> }
+const entryLinks = [
+  { label: 'Open Command Center', to: '/app' },
+  { label: 'View Backend Status', to: '/status' },
+  { label: 'View Escalations', to: '/escalations' },
+  { label: 'View Approvals', to: '/approvals' },
+  { label: 'View Root-Cause Radar', to: '/radar' },
+  { label: 'View Testing / Admin', to: '/testing' },
+]
+
+const Index = () => (
+  <div className="min-h-screen bg-background">
+    <LandingHeader />
+    <LandingSection id="overview" eyebrow="Product Statement" title="ResolveSphere AI">
+      <p className="text-sm font-medium text-muted-foreground">Autonomous Case Resolution for Enterprise Support</p>
+      <p className="mt-3 text-base font-semibold">DON'T ANSWER THE TICKET. RESOLVE THE CASE.</p>
+      <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+        ResolveSphere reconstructs customer cases, investigates evidence, applies policy and risk controls, executes approved actions, and verifies the resulting state.
+      </p>
+    </LandingSection>
+    <LandingSection eyebrow="Operating Principles" title="How ResolveSphere behaves">
+      <PrinciplePanel />
+    </LandingSection>
+    <LandingSection id="architecture" eyebrow="Architecture Boundary" title="Who is responsible for what">
+      <ArchitectureBoundaryPanel />
+    </LandingSection>
+    <LandingSection id="scenarios" eyebrow="Demo Scenarios" title="Four evaluated case paths">
+      <div className="grid gap-4 sm:grid-cols-2">
+        {scenarios.map((scenario) => (
+          <DemoScenarioPanel key={scenario.name} name={scenario.name} description={scenario.description} to="/status" />
+        ))}
+      </div>
+    </LandingSection>
+    <LandingSection eyebrow="Backend Status" title="What is actually connected right now">
+      <BackendStatusPanel />
+    </LandingSection>
+    <LandingSection eyebrow="App Entry" title="Open the workspace">
+      <div className="flex flex-wrap gap-3">
+        {entryLinks.map((link) => (
+          <Button key={link.to} asChild variant="outline">
+            <Link to={link.to}>{link.label}</Link>
+          </Button>
+        ))}
+      </div>
+    </LandingSection>
+    <FooterBar />
+  </div>
+)
+
+export default Index
