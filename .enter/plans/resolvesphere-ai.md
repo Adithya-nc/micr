@@ -17,6 +17,7 @@ Build ResolveSphere AI as an evidence-driven enterprise case-resolution applicat
 - Validate realtime updates; otherwise use a 3-second polling query on the active-case route.
 - Validate storage only if knowledge/media capability requires it; no media uploads are in baseline scope.
 - Validate the runtime Qwen model selector and record the actual exposed Qwen model identifier without hardcoding an unavailable version.
+- Validate Python/Pydantic availability for the authoritative backend validator. If unavailable, record the exact limitation and the closest deterministic typed-validator fallback in `docs/fallbacks.md`; frontend Zod is not an authoritative replacement.
 - Record every unavailable capability and its approved fallback in `docs/fallbacks.md` before dependent implementation begins.
 
 ### B. Locked JSON schemas
@@ -62,7 +63,7 @@ Build ResolveSphere AI as an evidence-driven enterprise case-resolution applicat
     "authority_level": {"enum": ["AUTHORITATIVE", "SECONDARY", "HISTORICAL", "CUSTOMER_STATEMENT"]},
     "observed_at": {"type": "string", "format": "date-time"}, "retrieved_at": {"type": "string", "format": "date-time"},
     "freshness_status": {"enum": ["FRESH", "STALE", "EXPIRED", "UNKNOWN"]},
-    "retrieval_method": {"type": "string"}, "relevance": {"type": "string"}, "status": {"enum": ["ACTIVE", "SUPERSEDED", "RETRACTED"]}
+    "retrieval_method": {"type": "string"}, "relevance": {"type": "string"}, "status": {"enum": ["ACTIVE", "CONTRADICTED", "SUPERSEDED", "RETRACTED"]}
   }
 }
 ```
@@ -108,16 +109,17 @@ The transition function will allow only these edges; every other state pair is r
 - `CONTEXT_BUILT → INVESTIGATING | ESCALATED | FAILED`
 - `INVESTIGATING → EVIDENCE_GAP | CONTRADICTION | EVIDENCE_READY | ESCALATED | FAILED`
 - `EVIDENCE_GAP → INVESTIGATING | ESCALATED | FAILED`
-- `CONTRADICTION → INVESTIGATING` only after fresh authoritative conflict-resolving evidence; otherwise `CONTRADICTION → ESCALATED | FAILED`
+- `CONTRADICTION → INVESTIGATING` only after newly stored authoritative conflict-resolving evidence and an explicit deterministic Control Plane or human trigger; otherwise `CONTRADICTION → ESCALATED | FAILED`. Qwen may explain but cannot cause this transition.
 - `EVIDENCE_READY → DECISION_READY | INVESTIGATING | ESCALATED | FAILED`
 - `DECISION_READY → APPROVAL_REQUIRED | ACTION_EXECUTING | EVIDENCE_GAP | CONTRADICTION | ESCALATED | FAILED`
 - `APPROVAL_REQUIRED → ACTION_EXECUTING | ESCALATED | FAILED`
 - `ACTION_EXECUTING → VERIFYING | ESCALATED | FAILED`
 - `VERIFYING → RESOLVED | REOPENED | ESCALATED | FAILED`
 - `REOPENED → INVESTIGATING | ESCALATED | FAILED`
-- `RESOLVED`, `ESCALATED`, and `FAILED` are terminal except an explicit new intake creates a new `NEW` case.
+- `RESOLVED` is terminal for the active lifecycle. A later authoritative mismatch creates a linked `REOPENED` successor case or append-only reopen artifact and emits `CASE_REOPENED`; the original resolved record is never silently mutated.
+- `ESCALATED` and `FAILED` are hard terminals for the active lifecycle.
 
-Explicit forbidden invariants: `NEW → RESOLVED`; `INVESTIGATING → RESOLVED`; `ACTION_EXECUTING → RESOLVED`; `CONTRADICTION → ACTION_EXECUTING`; and `VERIFYING` failure → `RESOLVED`. An action must pass through `VERIFYING`; two failed verifications route to `ESCALATED`; a contradiction can resume only with newly stored authoritative resolution evidence.
+Explicit forbidden invariants: `NEW → RESOLVED`; `INVESTIGATING → RESOLVED`; `ACTION_EXECUTING → RESOLVED`; `CONTRADICTION → ACTION_EXECUTING`; `VERIFYING` failure → `RESOLVED`; and any Qwen-triggered `CONTRADICTION → INVESTIGATING`. An action must pass through `VERIFYING`; two failed verifications route to `ESCALATED`; contradiction recovery needs newly stored authoritative resolution evidence plus a deterministic/human trigger.
 
 ## Recommended implementation approach
 
@@ -127,12 +129,12 @@ Explicit forbidden invariants: `NEW → RESOLVED`; `INVESTIGATING → RESOLVED`;
    - Seed fully synthetic Scenario 1–4 data, policies POL-001 through POL-007, operational events, and reproducible reset behavior.
 
 2. **Deterministic control and execution planes**
-   - Implement typed, testable Cloud Function modules for intake, context construction/redaction, approved read evidence collection, freshness, sufficiency, contradiction detection, policy evaluation, risk scoring, authorization, contract validation, idempotent simulated refund, verification, reopen, escalation, approvals, root-cause radar, and reset.
+   - Implement typed, testable Cloud Function modules for intake, context construction/redaction, approved read evidence collection, freshness, sufficiency, contradiction detection, policy evaluation, risk scoring, authorization, idempotent simulated refund, verification, reopen, escalation, approvals, root-cause radar, and reset. Map the locked Case Twin, Evidence Ledger, Resolution Contract, and Verification Receipt schemas to Pydantic models as the authoritative Trust Layer validator; document the exact deterministic fallback only if Python/Pydantic validation is unavailable.
    - Persist immutable decisions, actions, verification receipts, passports, outcome memory, and case events. Ensure every state change goes through the transition function.
    - Build the tool manifest and function interfaces. Qwen tool requests are read-only intents checked against this manifest; no write function is exposed to Qwen.
 
 3. **Intelligence and workflow configuration**
-   - Register one orchestrator and SK-01–SK-07 with bounded inputs/outputs; place strict JSON prompt templates and Zod validation schemas under backend configuration.
+   - Register one orchestrator and SK-01–SK-07 with bounded inputs/outputs; place strict JSON prompt templates and Pydantic-backed backend schemas under configuration. Zod, if used at all, is limited to optional client state typing.
    - Restrict Qwen calls to semantic intake, investigation planning, contract proposal, targeted questions, escalation/case summaries, and root-cause interpretation. Re-prompt invalid JSON once, then deterministically fail/escalate.
    - Configure refund, approval, escalation, and verification workflows, or document and implement sequential Cloud Function fallbacks only when workflow capability validation fails.
 
@@ -145,18 +147,20 @@ Explicit forbidden invariants: `NEW → RESOLVED`; `INVESTIGATING → RESOLVED`;
 5. **Tests, safety, and acceptance**
    - Add golden tests GC-01–GC-06 and adversarial tests AT-01–AT-06 using mock Resolution Contracts and Evidence Ledger fixtures, never spending Qwen calls on deterministic tests.
    - Exercise success, evidence gap, contradiction, approval, verification-failure/reopen, incident-radar, stale-evidence, changed-contract approval, unapproved tool, unknown execution, and corrupt postcondition paths.
-   - Update runbook/test records only with actual results; validate TypeScript, lint/build, backend test suite, and responsive routes at desktop and mobile viewports.
+   - Update runbook/test records only with actual results. Do not run build, dev, migration, seed, deployment, package-manager, compiler, or server commands; record the exact deferred commands and expected results in `docs/verification-commands.md`. Run only deterministic tests that the workspace can execute without those commands or live Qwen.
 
 ## Critical files and planned additions
 - `src/index.css`, `tailwind.config.ts`, `src/App.tsx`, `src/router.tsx`, `src/pages/*`, `src/components/*`, `src/lib/*` — enterprise UI, routes, typed data access, and design tokens.
 - `backend/schema/*`, `backend/functions/*`, `backend/workflows/*`, `backend/skills/*`, `backend/prompts/*`, `backend/seed/*`, `backend/tests/*` — deterministic backend, workflow definitions, tool boundary, prompts, fixtures, and behavioral tests.
 - `knowledge/policies/*`, `knowledge/sops/*`, `knowledge/product/*` — semantic-only knowledge sources.
-- `docs/phase0-validation.md`, `docs/fallbacks.md`, `docs/architecture.md`, `docs/data-model.md`, `docs/tool-registry.md`, `docs/api.md`, `docs/test-results.md`, `docs/demo-runbook.md` — accurate operational artifacts.
+- `docs/phase0-validation.md`, `docs/fallbacks.md`, `docs/architecture.md`, `docs/data-model.md`, `docs/tool-registry.md`, `docs/api.md`, `docs/test-results.md`, `docs/demo-runbook.md`, `docs/verification-commands.md` — accurate operational artifacts and all deferred command verification.
 
 ## Implementation checklist
-- [ ] Validate and document each Phase 0 capability and fallback before backend implementation.
+- [ ] Validate and document each Phase 0 capability, including Python/Pydantic, and every approved fallback before backend implementation.
+- [ ] Create Pydantic models for all locked schemas and use them as the authoritative Resolution Contract, Case Twin, Evidence Ledger, and Verification Receipt validator.
 - [ ] Create all core, synthetic, policy, event, ledger, approval, passport, outcome-memory, and incident storage structures with referential constraints.
-- [ ] Enforce the locked state transition allow-list and emit one `case_events` record for every successful transition.
+- [ ] Enforce the locked state transition allow-list, including bounded `VERIFYING → REOPENED → INVESTIGATING` and deterministic/human-only contradiction recovery, and emit one `case_events` record for every successful transition.
+- [ ] Create an append-only linked reopen successor/artifact for a post-resolution authoritative mismatch rather than mutating a resolved case.
 - [ ] Seed resettable, labelled synthetic data and all four requested scenarios.
 - [ ] Implement deterministic evidence freshness, sufficiency, contradiction, policy, risk, authorization, idempotency, and verification invariants.
 - [ ] Implement only authorized, labelled simulated refund execution and closed-loop authoritative verification.
@@ -180,4 +184,5 @@ Explicit forbidden invariants: `NEW → RESOLVED`; `INVESTIGATING → RESOLVED`;
 - [ ] Given an intentionally failed predicate or two failed verification attempts, the case never resolves and routes through reopen or escalation as defined.
 - [ ] Given Scenario 4 historical records and EVT-501, when radar runs, the incident distinguishes FACT, CORRELATION, HYPOTHESIS, and RECOMMENDATION.
 - [ ] Confirm UI uses backend counts/events, labels synthetic/simulated data, and never represents execution success as verification success.
-- [ ] Run `pnpm check`, `pnpm run build`, backend behavioral tests, and targeted desktop/mobile route visual checks after implementation.
+- [ ] Run only deterministic backend tests executable without build, dev, migration, seed, deployment, package-manager, compiler, or live-Qwen commands; record actual outcomes in `docs/test-results.md`.
+- [ ] Write exact deferred build, frontend check, migration, seed, deployment, and unavailable backend-test commands with their expected results to `docs/verification-commands.md` without executing them.
