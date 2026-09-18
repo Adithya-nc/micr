@@ -8,6 +8,17 @@ const corsHeaders = {
 
 const QWEN_MODEL = "alibaba/qwen-3.8-max";
 
+const QWEN_SYSTEM_PROMPT = `You are SK-04 Resolution Proposal for ResolveSphere AI.
+You are a bounded reasoning component. You have NO write authority and MUST NOT claim that an action was executed.
+Given the Case Twin, authoritative Evidence Ledger summary, and applicable policy, propose the next resolution contract.
+Return ONLY strict JSON matching this exact shape:
+{"case_id":string,"problem":string,"evidence_ids":string[],"proposed_action":{"type":"REFUND_PAYMENT"|"REQUEST_CUSTOMER_INFO"|"ESCALATE_CASE","target_id":string,"amount":number,"currency":string},"policy_reference":string,"risk_level":"LOW"|"MEDIUM"|"HIGH","authorization_required":boolean,"expected_state":{"entity":string,"target_id":string,"status":string},"verification_target":string,"escalation_required":boolean,"customer_message_intent":string}
+Rules:
+- Use only evidence_ids supplied in the user context.
+- Do not invent records, amounts, statuses, policies, tools, approvals, or contract hashes.
+- If evidence is insufficient or contradictory, propose REQUEST_CUSTOMER_INFO or ESCALATE_CASE; never invent a successful refund.
+- The control plane, not you, decides authorization, executes writes, and verifies the result.`;
+
 const ALLOWED: Record<string, string[]> = {
   NEW: ["ROUTED", "FAILED"],
   ROUTED: ["CONTEXT_BUILT", "ESCALATED", "FAILED"],
@@ -130,8 +141,16 @@ class Engine {
 
   async transition(caseId: string, current: string, target: string, eventType: string, payload: Record<string, unknown> = {}) {
     if (!ALLOWED[current]?.includes(target)) throw new Error(`illegal transition ${current} -> ${target}`);
-    await this.supabase.from("rs_cases").update({ status: target, updated_at: new Date().toISOString() }).eq("case_id", caseId);
-    await this.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: caseId, event_type: eventType, payload });
+    const { error: updateError } = await this.supabase
+      .from("rs_cases")
+      .update({ status: target, updated_at: new Date().toISOString() })
+      .eq("case_id", caseId);
+    if (updateError) throw new Error(`state transition failed: ${updateError.message}`);
+
+    const { error: eventError } = await this.supabase.from("rs_case_events").insert({
+      event_id: crypto.randomUUID(), case_id: caseId, event_type: eventType, payload,
+    });
+    if (eventError) throw new Error(`state event failed: ${eventError.message}`);
     return target;
   }
 
@@ -141,7 +160,8 @@ class Engine {
   }
 
   async insertEvidence(row: Record<string, unknown>) {
-    await this.supabase.from("rs_evidence_ledger").insert(row);
+    const { error } = await this.supabase.from("rs_evidence_ledger").insert(row);
+    if (error) throw new Error(`evidence insert failed: ${error.message}`);
   }
 
   async handoff(caseId: string, from: string, to: string, message: string) {
@@ -158,9 +178,94 @@ class Engine {
     return data ?? [];
   }
 
+  async qwenResolutionProposal(
+    caseId: string,
+    twin: Record<string, unknown>,
+    evidenceSummary: Record<string, unknown>,
+    policySummary: Record<string, unknown>,
+  ) {
+    const token = Deno.env.get("AI_API_TOKEN_70c32d0a6eb2");
+    if (!token) throw new Error("AI_API_TOKEN_70c32d0a6eb2 is not configured");
+
+    let lastError = "Qwen proposal failed";
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        const response = await fetch("https://api.enter.pro/code/api/v1/ai/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            "X-Session-ID": crypto.randomUUID(),
+            "X-Enter-Project-ID": "70c32d0a6eb24783a12e5edabe9d40c7",
+          },
+          body: JSON.stringify({
+            model: QWEN_MODEL,
+            stream: false,
+            temperature: 0,
+            messages: [
+              { role: "system", content: QWEN_SYSTEM_PROMPT },
+              {
+                role: "user",
+                content: `CASE_TWIN=${JSON.stringify(twin)}\nEVIDENCE_LEDGER=${JSON.stringify(evidenceSummary)}\nPOLICY=${JSON.stringify(policySummary)}`,
+              },
+            ],
+          }),
+        });
+
+        const rawBody = await response.text();
+        if (!response.ok) throw new Error(`Qwen HTTP ${response.status}: ${rawBody.slice(0, 500)}`);
+
+        const data = JSON.parse(rawBody);
+        const content = String(data.choices?.[0]?.message?.content ?? "").trim();
+        if (!content) throw new Error("Qwen returned an empty proposal");
+
+        const cleaned = content
+          .replace(/^```json\s*/i, "")
+          .replace(/^```\s*/i, "")
+          .replace(/\s*```$/i, "")
+          .trim();
+
+        const parsed = ContractSchema.parse(JSON.parse(cleaned));
+
+        if (parsed.case_id !== caseId) throw new Error("Qwen proposal case_id does not match the active case");
+        const allowedEvidence = new Set((evidenceSummary.evidence_ids as string[]) ?? []);
+        if (parsed.evidence_ids.some((id) => !allowedEvidence.has(id))) {
+          throw new Error("Qwen proposal referenced evidence outside the supplied ledger");
+        }
+
+        await this.supabase.from("rs_case_events").insert({
+          event_id: crypto.randomUUID(),
+          case_id: caseId,
+          event_type: "QWEN_PROPOSAL_ACCEPTED",
+          payload: { model: QWEN_MODEL, attempt },
+        });
+
+        return { contract: parsed, qwen_used: true, qwen_attempts: attempt, qwen_error: "" };
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+        await this.supabase.from("rs_case_events").insert({
+          event_id: crypto.randomUUID(),
+          case_id: caseId,
+          event_type: "QWEN_PROPOSAL_ATTEMPT",
+          payload: { model: QWEN_MODEL, attempt, error: lastError.slice(0, 1000) },
+        });
+      }
+    }
+
+    return { contract: null, qwen_used: false, qwen_attempts: 2, qwen_error: lastError };
+  }
+
   async finish(caseId: string, rootCause: string, response: string) {
-    await this.supabase.from("rs_cases").update({ root_cause: rootCause, customer_response: response }).eq("case_id", caseId);
-    await this.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: caseId, event_type: "CUSTOMER_RESPONSE_GENERATED", payload: { response } });
+    const { error: caseError } = await this.supabase
+      .from("rs_cases")
+      .update({ root_cause: rootCause, customer_response: response })
+      .eq("case_id", caseId);
+    if (caseError) throw new Error(`case completion update failed: ${caseError.message}`);
+
+    const { error: eventError } = await this.supabase.from("rs_case_events").insert({
+      event_id: crypto.randomUUID(), case_id: caseId, event_type: "CUSTOMER_RESPONSE_GENERATED", payload: { response },
+    });
+    if (eventError) throw new Error(`customer response event failed: ${eventError.message}`);
   }
 
   async submitCase(input: { customer_id: string; customer_name?: string; customer_email?: string; complaint: string; reference_id?: string; category?: string }) {
@@ -269,171 +374,316 @@ class Engine {
 
   async runAutonomous(caseId: string) {
     let status = await this.getCaseStatus(caseId);
-    const resume = status === "INVESTIGATING";
-    const { data: caseRow0 } = await this.supabase.from("rs_cases").select("*").eq("case_id", caseId).single();
-    const paymentRef = caseRow0.reference_id ?? "PAY-7001";
-    if (!resume) {
-      status = await this.transition(caseId, status, "ROUTED", "INTENT_CLASSIFIED", { primary_intent: "payment_success_order_missing", domain: "Billing", urgency: "HIGH", sentiment: "FRUSTRATED" });
-      await this.supabase.from("rs_cases").update({ primary_intent: "payment_success_order_missing", category: "Billing", assigned_agent: "Billing & Payments Agent", reference_id: paymentRef }).eq("case_id", caseId);
-      await this.handoff(caseId, "ResolveSphere Orchestrator", "Billing & Payments Agent", "Routed charge-without-order complaint to billing specialist");
+    const { data: caseRow, error: caseError } = await this.supabase.from("rs_cases").select("*").eq("case_id", caseId).single();
+    if (caseError || !caseRow) throw new Error(`Case ${caseId} was not found`);
+
+    if (status === "NEW") {
+      status = await this.transition(caseId, status, "ROUTED", "INTENT_CLASSIFIED", {
+        primary_intent: caseRow.primary_intent ?? "payment_success_order_missing",
+        domain: caseRow.category ?? "Billing",
+        urgency: caseRow.urgency ?? "HIGH",
+        sentiment: caseRow.sentiment ?? "FRUSTRATED",
+      });
+    }
+    if (status === "ROUTED") {
+      const specialist = caseRow.assigned_agent ?? "Billing & Payments Agent";
+      await this.supabase.from("rs_cases").update({
+        category: caseRow.category ?? "Billing",
+        assigned_agent: specialist,
+        reference_id: caseRow.reference_id ?? "PAY-7001",
+      }).eq("case_id", caseId);
+      await this.handoff(caseId, "ResolveSphere Orchestrator", specialist, "Routed case to the specialist responsible for the relevant domain");
       status = await this.transition(caseId, status, "CONTEXT_BUILT", "CONTEXT_RECONSTRUCTED");
     }
-    const { data: caseRow } = await this.supabase.from("rs_cases").select("*").eq("case_id", caseId).single();
-    const { data: payment } = await this.supabase.from("rs_synthetic_payments").select("*").eq("payment_id", paymentRef).single();
-    const { data: order } = await this.supabase.from("rs_synthetic_orders").select("*").eq("payment_id", payment.payment_id).single();
-    if (!resume) {
-      const twin = {
-        case_id: caseId,
-        customer_ref: `[REDACTED:${caseRow.customer_id}]`,
-        primary_intent: "missing_order_after_payment",
-        domain: ["billing", "order"],
-        urgency: caseRow.urgency,
-        sla_state: "WITHIN_SLA",
-        context: { relevant_orders: [order.order_id], relevant_payments: [payment.payment_id] },
-      };
-      await this.supabase.from("rs_case_twins").upsert({ case_id: caseId, twin });
+    if (status === "CONTEXT_BUILT") {
       status = await this.transition(caseId, status, "INVESTIGATING", "INVESTIGATION_STARTED");
     }
+    if (status === "REOPENED") {
+      status = await this.transition(caseId, status, "INVESTIGATING", "INVESTIGATION_RESUMED");
+    }
+    if (status !== "INVESTIGATING") {
+      return { case_id: caseId, status, message: "Case is not eligible for autonomous execution from its current state." };
+    }
+
+    const referenceId = String(caseRow.reference_id ?? "PAY-7001");
+    const [{ data: paymentById }, { data: refundById }] = await Promise.all([
+      this.supabase.from("rs_synthetic_payments").select("*").eq("payment_id", referenceId).maybeSingle(),
+      this.supabase.from("rs_synthetic_refunds").select("*").eq("refund_id", referenceId).maybeSingle(),
+    ]);
+
+    let payment = paymentById;
+    const refund = refundById;
+    if (refund?.payment_id && !payment) {
+      const { data } = await this.supabase.from("rs_synthetic_payments").select("*").eq("payment_id", refund.payment_id).maybeSingle();
+      payment = data;
+    }
+
+    let order = null;
+    if (payment) {
+      const { data } = await this.supabase.from("rs_synthetic_orders").select("*").eq("payment_id", payment.payment_id).maybeSingle();
+      order = data;
+    }
+
+    const twin = {
+      case_id: caseId,
+      customer_ref: `[REDACTED:${caseRow.customer_id}]`,
+      primary_intent: caseRow.primary_intent ?? "payment_success_order_missing",
+      domain: [String(caseRow.category ?? "Billing").toLowerCase()],
+      urgency: caseRow.urgency ?? "HIGH",
+      sla_state: "WITHIN_SLA",
+      context: {
+        relevant_payments: payment ? [payment.payment_id] : [],
+        relevant_orders: order ? [order.order_id] : [],
+        relevant_refunds: refund ? [refund.refund_id] : [],
+      },
+    };
+    await this.supabase.from("rs_case_twins").upsert({ case_id: caseId, twin });
 
     const now = new Date().toISOString();
-    let evPay = `EV-${crypto.randomUUID().slice(0, 8)}`;
-    let evOrd = `EV-${crypto.randomUUID().slice(0, 8)}`;
-    if (resume) {
-      const { data: existing } = await this.supabase.from("rs_evidence_ledger").select("evidence_id, field_name").eq("case_id", caseId).eq("status", "ACTIVE");
-      evPay = (existing ?? []).find((e) => e.field_name === "payment_status")?.evidence_id ?? evPay;
-      evOrd = (existing ?? []).find((e) => e.field_name === "order_status")?.evidence_id ?? evOrd;
-    } else {
-      await this.insertEvidence({ evidence_id: evPay, case_id: caseId, source_system: "Payment System", source_record_id: payment.payment_id, source_type: "TRANSACTIONAL", field_name: "payment_status", value: payment.status, authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_payment", relevance: "Confirms the customer was charged", status: "ACTIVE" });
-      await this.insertEvidence({ evidence_id: evOrd, case_id: caseId, source_system: "Order System", source_record_id: order.order_id, source_type: "TRANSACTIONAL", field_name: "order_status", value: order.status, authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_order", relevance: "Confirms fulfilment failed", status: "ACTIVE" });
-      await this.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: caseId, event_type: "EVIDENCE_RETRIEVED", payload: { evidence_ids: [evPay, evOrd] } });
-      await this.knowledge(caseId, ["POL-001", "POL-005"]);
-    }
-    await this.handoff(caseId, "Billing & Payments Agent", "Orders & Fulfillment Agent", `Requested order state for ${payment.payment_id}`);
-    await this.handoff(caseId, "Orders & Fulfillment Agent", "Billing & Payments Agent", `Order ${order.order_id} is ${order.status}; payment ${payment.payment_id} is ${payment.status}`);
+    const existing = (await this.supabase.from("rs_evidence_ledger").select("evidence_id,field_name,value,authority_level,status,observed_at,source_type").eq("case_id", caseId).eq("status", "ACTIVE")).data ?? [];
+    const evidenceIds: string[] = existing.map((e) => e.evidence_id);
 
-    const evidenceRows = [
-      { field_name: "payment_status", value: payment.status, authority_level: "AUTHORITATIVE", status: "ACTIVE", observed_at: now, source_type: "TRANSACTIONAL" },
-      { field_name: "order_status", value: order.status, authority_level: "AUTHORITATIVE", status: "ACTIVE", observed_at: now, source_type: "TRANSACTIONAL" },
-    ];
-    const { result: sufficient, gaps } = sufficiencyOf(evidenceRows);
-    status = await this.transition(caseId, status, "EVIDENCE_READY", "RESOLUTION_PROPOSED", { sufficiency: sufficient, gaps });
+    const addEvidence = async (fieldName: string, value: unknown, sourceRecordId: string, relevance: string, retrievalMethod: string) => {
+      const already = existing.find((e) => e.field_name === fieldName);
+      if (already) return already.evidence_id;
+      const id = `EV-${crypto.randomUUID().slice(0, 8)}`;
+      evidenceIds.push(id);
+      await this.insertEvidence({
+        evidence_id: id, case_id: caseId, source_system: fieldName === "payment_status" ? "Payment System" : fieldName === "order_status" ? "Order System" : "Refund System",
+        source_record_id: sourceRecordId, source_type: "TRANSACTIONAL", field_name: fieldName, value,
+        authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH",
+        retrieval_method: retrievalMethod, relevance, status: "ACTIVE",
+      });
+      return id;
+    };
 
-    const AI_API_TOKEN = Deno.env.get("AI_API_TOKEN_70c32d0a6eb2");
-    let contract: z.infer<typeof ContractSchema> | null = null;
-    let qwenUsed = false;
-    let qwenError = "";
-    if (AI_API_TOKEN) {
-      for (let attempt = 0; attempt < 2 && !contract; attempt++) {
-        try {
-          const response = await fetch("https://api.enter.pro/code/api/v1/ai/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${AI_API_TOKEN}`, "Content-Type": "application/json", "X-Session-ID": crypto.randomUUID(), "X-Enter-Project-ID": "70c32d0a6eb24783a12e5edabe9d40c7" },
-            body: JSON.stringify({
-              model: QWEN_MODEL,
-              stream: false,
-              temperature: 0,
-              messages: [
-                { role: "system", content: 'You are SK-04 Resolution Proposal for ResolveSphere AI. You reason and propose only; you have no write authority. Return ONLY strict JSON, no prose, no markdown fences, matching: {"case_id":string,"problem":string,"evidence_ids":string[],"proposed_action":{"type":"REFUND_PAYMENT"|"REQUEST_CUSTOMER_INFO"|"ESCALATE_CASE","target_id":string,"amount":number,"currency":string},"policy_reference":string,"risk_level":"LOW"|"MEDIUM"|"HIGH","authorization_required":boolean,"expected_state":{"entity":string,"target_id":string,"status":string},"verification_target":string,"escalation_required":boolean,"customer_message_intent":string}. Use only the given evidence_ids.' },
-                { role: "user", content: `Case Twin: ${JSON.stringify(twin)}\nEvidence: payment ${payment.payment_id} status ${payment.status} amount ${payment.amount} ${payment.currency}; order ${order.order_id} status ${order.status}. evidence_ids: ["${evPay}","${evOrd}"]. Policy candidate POL-001.` },
-              ],
-            }),
-          });
-          if (!response.ok) throw new Error(`status ${response.status}`);
-          const data = await response.json();
-          const raw = (data.choices?.[0]?.message?.content ?? "").trim().replace(/^```json\s*|```$/g, "");
-          contract = ContractSchema.parse(JSON.parse(raw));
-          qwenUsed = true;
-        } catch (err) {
-          qwenError = err instanceof Error ? err.message : String(err);
-        }
+    if (payment) await addEvidence("payment_status", payment.status, payment.payment_id, "Authoritative payment state", "get_payment");
+    if (order) await addEvidence("order_status", order.status, order.order_id, "Authoritative order state", "get_order");
+    if (refund) await addEvidence("refund_status", refund.status, refund.refund_id, "Authoritative refund state", "get_refund");
+
+    await this.supabase.from("rs_case_events").insert({
+      event_id: crypto.randomUUID(), case_id: caseId, event_type: "EVIDENCE_RETRIEVED", payload: { evidence_ids: evidenceIds },
+    });
+
+    const policies = await this.knowledge(caseId, ["POL-001", "POL-005"]);
+    await this.handoff(caseId, caseRow.assigned_agent ?? "Billing & Payments Agent", "Knowledge & Policy Agent", "Retrieved applicable policy before proposing a resolution");
+
+    const evidenceRows = (await this.supabase.from("rs_evidence_ledger").select("evidence_id,field_name,value,authority_level,status,observed_at,source_type").eq("case_id", caseId).eq("status", "ACTIVE")).data ?? [];
+    const { result: sufficient, gaps } = sufficiencyOf(evidenceRows as any);
+
+    if (sufficient !== "SUFFICIENT") {
+      const { score, level } = riskOf(Number(payment?.amount ?? 0), gaps, caseRow.urgency ?? "MEDIUM", caseRow.reopened_count ?? 0);
+      const decisionId = `DEC-${crypto.randomUUID().slice(0, 8)}`;
+      const authState = authorize("POL-005", score, sufficient);
+
+      await this.supabase.from("rs_decisions").insert({
+        decision_id: decisionId, case_id: caseId, contract_hash: "n/a", contract_version: "1.0",
+        evidence_ids: evidenceIds, policy_id: "POL-005", policy_version: "1.0", risk_score: score,
+        risk_factors: { gaps, level }, auth_state: authState, decision: authState, reason_codes: gaps,
+      });
+
+      if (sufficient === "BLOCKED") {
+        status = await this.transition(caseId, status, "CONTRADICTION", "CONTRADICTION_DETECTED", { gaps });
+        status = await this.transition(caseId, status, "ESCALATED", "ESCALATED_TO_HUMAN", { decision_id: decisionId, reason: "CONTRADICTION_DETECTED" });
+        await this.supabase.from("rs_cases").update({ escalation_reason: "CONTRADICTION_DETECTED", risk_level: level, authorization_state: "ESCALATE" }).eq("case_id", caseId);
+        return { case_id: caseId, status, decision: "ESCALATE", qwen_used: false, reason: "CONTRADICTION_DETECTED" };
       }
+
+      status = await this.transition(caseId, status, "EVIDENCE_GAP", "EVIDENCE_GAP_FOUND", { gap_codes: gaps });
+      const question = !payment
+        ? "Could you share the payment reference or order number for this request?"
+        : !order
+          ? "Could you confirm the order number linked to this payment?"
+          : "Could you provide the missing transaction detail needed to continue?";
+      await this.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: caseId, event_type: "QUESTION_ASKED", payload: { question } });
+      await this.supabase.from("rs_cases").update({ authorization_state: "ASK_CUSTOMER", risk_level: level }).eq("case_id", caseId);
+      return { case_id: caseId, status, next: "awaiting_customer", question, qwen_used: false };
     }
-    if (!contract) {
+
+    status = await this.transition(caseId, status, "EVIDENCE_READY", "EVIDENCE_READY", { evidence_ids: evidenceIds });
+
+    const evidenceSummary = {
+      evidence_ids: evidenceIds,
+      payment_status: payment?.status,
+      payment_id: payment?.payment_id,
+      amount: Number(payment?.amount ?? 0),
+      currency: payment?.currency ?? "INR",
+      order_status: order?.status,
+      order_id: order?.order_id,
+    };
+    const policySummary = (policies ?? []).map((p) => ({
+      policy_id: p.policy_id, version: p.version, rule_text: p.rule_text,
+    }));
+
+    const qwen = await this.qwenResolutionProposal(caseId, twin, evidenceSummary, policySummary);
+    let qwenUsed = qwen.qwen_used;
+    let qwenError = qwen.qwen_error;
+    let contract: z.infer<typeof ContractSchema>;
+
+    if (qwen.contract) {
+      contract = qwen.contract;
+      const targetMatches = contract.proposed_action.type === "REFUND_PAYMENT"
+        && contract.proposed_action.target_id === payment?.payment_id
+        && Number(contract.proposed_action.amount) === Number(payment?.amount)
+        && contract.proposed_action.currency === payment?.currency;
+
+      if (!targetMatches) {
+        qwenUsed = false;
+        qwenError = "Qwen proposal failed deterministic target/amount/currency validation";
+        contract = ContractSchema.parse({
+          case_id: caseId, problem: "payment_success_order_missing", evidence_ids: evidenceIds,
+          proposed_action: { type: "ESCALATE_CASE", target_id: caseId, amount: 0, currency: payment?.currency ?? "INR" },
+          policy_reference: "POL-005", risk_level: "HIGH", authorization_required: true,
+          expected_state: { entity: "case", target_id: caseId, status: "ESCALATED" },
+          verification_target: "rs_cases", escalation_required: true, customer_message_intent: "human_review",
+        });
+      }
+    } else {
       contract = ContractSchema.parse({
-        case_id: caseId, problem: "payment_success_order_missing", evidence_ids: [evPay, evOrd],
-        proposed_action: { type: "REFUND_PAYMENT", target_id: payment.payment_id, amount: Number(payment.amount), currency: payment.currency },
+        case_id: caseId, problem: "payment_success_order_missing", evidence_ids: evidenceIds,
+        proposed_action: { type: "REFUND_PAYMENT", target_id: payment!.payment_id, amount: Number(payment!.amount), currency: payment!.currency },
         policy_reference: "POL-001", risk_level: "LOW", authorization_required: false,
-        expected_state: { entity: "refund", target_id: payment.payment_id, status: "SUCCESS" },
+        expected_state: { entity: "refund", target_id: payment!.payment_id, status: "SUCCESS" },
         verification_target: "rs_synthetic_refunds", escalation_required: false, customer_message_intent: "refund_verified",
+      });
+      await this.supabase.from("rs_case_events").insert({
+        event_id: crypto.randomUUID(), case_id: caseId, event_type: "QWEN_FALLBACK", payload: { error: qwenError },
       });
     }
 
     const hash = await contractHash(contract);
-    status = await this.transition(caseId, status, "DECISION_READY", "RESOLUTION_PROPOSED", { contract_hash: hash, qwen_used: qwenUsed, qwen_error: qwenError || undefined });
+    status = await this.transition(caseId, status, "DECISION_READY", "DECISION_READY", {
+      contract_hash: hash, qwen_used: qwenUsed, qwen_error: qwenError || null,
+    });
 
-    const { score, level } = riskOf(contract.proposed_action.amount, gaps, caseRow.urgency, caseRow.reopened_count ?? 0);
+    const { score, level } = riskOf(contract.proposed_action.amount, gaps, caseRow.urgency ?? "MEDIUM", caseRow.reopened_count ?? 0);
     const authState = authorize(contract.policy_reference, score, sufficient);
     const decisionId = `DEC-${crypto.randomUUID().slice(0, 8)}`;
-    await this.supabase.from("rs_decisions").insert({ decision_id: decisionId, case_id: caseId, contract_hash: hash, contract_version: "1.0", evidence_ids: [evPay, evOrd], policy_id: contract.policy_reference, policy_version: "1.0", risk_score: score, risk_factors: { gaps }, auth_state: authState, decision: authState, reason_codes: gaps.length ? gaps : ["EVIDENCE_SUFFICIENT"] });
+
+    await this.supabase.from("rs_decisions").insert({
+      decision_id: decisionId, case_id: caseId, contract_hash: hash, contract_version: "1.0",
+      evidence_ids: evidenceIds, policy_id: contract.policy_reference, policy_version: "1.0",
+      risk_score: score, risk_factors: { gaps, qwen_risk_level: contract.risk_level, level },
+      auth_state: authState, decision: authState, reason_codes: gaps.length ? gaps : ["EVIDENCE_SUFFICIENT"],
+    });
     await this.supabase.from("rs_case_events").insert([
       { event_id: crypto.randomUUID(), case_id: caseId, event_type: "POLICY_CHECKED", payload: { policy: contract.policy_reference } },
       { event_id: crypto.randomUUID(), case_id: caseId, event_type: "RISK_ASSESSED", payload: { score, level } },
     ]);
 
-    if (authState !== "AUTO_ALLOWED") {
+    if (authState !== "AUTO_ALLOWED" || contract.proposed_action.type !== "REFUND_PAYMENT") {
       if (authState === "HUMAN_APPROVAL_REQUIRED") {
-        status = await this.transition(caseId, status, "APPROVAL_REQUIRED", "APPROVAL_REQUESTED", { decision_id: decisionId });
-        await this.supabase.from("rs_approvals").insert({ approval_id: `APR-${crypto.randomUUID().slice(0, 8)}`, decision_id: decisionId, case_id: caseId, contract_hash: hash, action_type: contract.proposed_action.type, target_id: contract.proposed_action.target_id, amount: contract.proposed_action.amount, policy_version: "1.0", risk_score: score, approval_status: "PENDING" });
+        status = await this.transition(caseId, status, "APPROVAL_REQUIRED", "APPROVAL_REQUESTED", { decision_id: decisionId, contract_hash: hash });
+        await this.supabase.from("rs_approvals").insert({
+          approval_id: `APR-${crypto.randomUUID().slice(0, 8)}`, decision_id: decisionId, case_id: caseId,
+          contract_hash: hash, action_type: contract.proposed_action.type, target_id: contract.proposed_action.target_id,
+          amount: contract.proposed_action.amount, policy_version: "1.0", risk_score: score, approval_status: "PENDING",
+        });
       } else {
         status = await this.transition(caseId, status, "ESCALATED", "ESCALATED_TO_HUMAN", { decision_id: decisionId, reason: authState });
-        await this.supabase.from("rs_cases").update({ escalation_reason: authState }).eq("case_id", caseId);
+        await this.supabase.from("rs_cases").update({ escalation_reason: authState, risk_level: level, authorization_state: authState }).eq("case_id", caseId);
       }
-      return { case_id: caseId, status, decision: authState, contract_hash: hash, qwen_used: qwenUsed };
+      return { case_id: caseId, status, decision: authState, contract_hash: hash, qwen_used: qwenUsed, qwen_error: qwenError || undefined };
     }
 
-    status = await this.transition(caseId, status, "ACTION_EXECUTING", "ACTION_AUTHORIZED", { decision_id: decisionId });
+    status = await this.transition(caseId, status, "ACTION_EXECUTING", "ACTION_AUTHORIZED", { decision_id: decisionId, contract_hash: hash });
     const idempotencyKey = idKey(caseId, contract.proposed_action.type, contract.proposed_action.target_id);
     const { data: existingIdem } = await this.supabase.from("rs_idempotency_ledger").select("*").eq("idempotency_key", idempotencyKey).maybeSingle();
+
     let actionId: string;
     let refundRow: Record<string, unknown>;
-    if (existingIdem && existingIdem.status === "COMPLETED") {
+    if (existingIdem?.status === "COMPLETED") {
       actionId = existingIdem.action_id;
       refundRow = existingIdem.result_payload as Record<string, unknown>;
     } else {
       actionId = `ACT-${crypto.randomUUID().slice(0, 8)}`;
-      await this.supabase.from("rs_idempotency_ledger").upsert({ idempotency_key: idempotencyKey, case_id: caseId, action_type: contract.proposed_action.type, target_id: contract.proposed_action.target_id, contract_hash: hash, status: "PENDING", action_id: actionId });
-      await this.supabase.from("rs_actions").insert({ action_id: actionId, case_id: caseId, contract_hash: hash, decision_id: decisionId, action_type: contract.proposed_action.type, target_id: contract.proposed_action.target_id, amount: contract.proposed_action.amount, currency: contract.proposed_action.currency, idempotency_key: idempotencyKey, status: "STARTED", simulated: true });
-      await this.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: caseId, event_type: "ACTION_STARTED", payload: { action_id: actionId } });
+      await this.supabase.from("rs_idempotency_ledger").upsert({
+        idempotency_key: idempotencyKey, case_id: caseId, action_type: contract.proposed_action.type,
+        target_id: contract.proposed_action.target_id, contract_hash: hash, status: "PENDING", action_id: actionId,
+      });
+      await this.supabase.from("rs_actions").insert({
+        action_id: actionId, case_id: caseId, contract_hash: hash, decision_id: decisionId,
+        action_type: contract.proposed_action.type, target_id: contract.proposed_action.target_id,
+        amount: contract.proposed_action.amount, currency: contract.proposed_action.currency,
+        idempotency_key: idempotencyKey, status: "STARTED", simulated: true,
+      });
+      await this.supabase.from("rs_case_events").insert({
+        event_id: crypto.randomUUID(), case_id: caseId, event_type: "ACTION_STARTED", payload: { action_id: actionId },
+      });
+
       const refundId = `REF-${caseId}`;
-      const refundPayload = { refund_id: refundId, payment_id: payment.payment_id, amount: contract.proposed_action.amount, currency: contract.proposed_action.currency, status: "SUCCESS", label: "SIMULATED" };
-      await this.supabase.from("rs_synthetic_refunds").upsert(refundPayload);
+      const refundPayload = {
+        refund_id: refundId, payment_id: payment!.payment_id,
+        amount: contract.proposed_action.amount, currency: contract.proposed_action.currency,
+        status: "SUCCESS", label: "SIMULATED",
+      };
+      const { error: refundError } = await this.supabase.from("rs_synthetic_refunds").upsert(refundPayload);
+      if (refundError) throw new Error(`Refund action failed: ${refundError.message}`);
+
       refundRow = refundPayload;
-      await this.supabase.from("rs_actions").update({ status: "COMPLETED", response_payload: refundPayload, completed_at: new Date().toISOString() }).eq("action_id", actionId);
-      await this.supabase.from("rs_idempotency_ledger").update({ status: "COMPLETED", result_payload: refundPayload, updated_at: new Date().toISOString() }).eq("idempotency_key", idempotencyKey);
-      await this.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: caseId, event_type: "ACTION_COMPLETED", payload: { action_id: actionId, simulated: true } });
+      await this.supabase.from("rs_actions").update({
+        status: "COMPLETED", response_payload: refundPayload, completed_at: new Date().toISOString(),
+      }).eq("action_id", actionId);
+      await this.supabase.from("rs_idempotency_ledger").update({
+        status: "COMPLETED", result_payload: refundPayload, updated_at: new Date().toISOString(),
+      }).eq("idempotency_key", idempotencyKey);
+      await this.supabase.from("rs_case_events").insert({
+        event_id: crypto.randomUUID(), case_id: caseId, event_type: "ACTION_COMPLETED", payload: { action_id: actionId, simulated: true },
+      });
     }
 
     status = await this.transition(caseId, status, "VERIFYING", "VERIFICATION_STARTED", { action_id: actionId });
-    const { data: authoritativeRefund } = await this.supabase.from("rs_synthetic_refunds").select("*").eq("payment_id", payment.payment_id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: authoritativeRefund } = await this.supabase.from("rs_synthetic_refunds")
+      .select("*").eq("payment_id", payment!.payment_id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
     const observed = authoritativeRefund ?? refundRow;
-    const canonicalPostconditionStatus: Record<string, string> = { REFUND_PAYMENT: "SUCCESS" };
-    const requiredStatus = canonicalPostconditionStatus[contract.proposed_action.type] ?? contract.expected_state.status;
     const predicateResults = {
-      status: observed.status === requiredStatus,
-      amount: Number(observed.amount) === Number(contract.proposed_action.amount),
-      payment_id: observed.payment_id === contract.proposed_action.target_id,
+      status: observed?.status === "SUCCESS",
+      amount: Number(observed?.amount) === Number(contract.proposed_action.amount),
+      payment_id: observed?.payment_id === contract.proposed_action.target_id,
     };
     const verified = Object.values(predicateResults).every(Boolean);
     const verificationId = `VER-${crypto.randomUUID().slice(0, 8)}`;
-    await this.supabase.from("rs_verifications").insert({ verification_id: verificationId, action_id: actionId, case_id: caseId, authoritative_source: "rs_synthetic_refunds", evidence_ids: [evPay, evOrd], expected_postconditions: ["status==SUCCESS", "amount==contract.amount", "payment_id==contract.target"], observed_state: observed, predicate_results: predicateResults, result: verified ? "VERIFIED" : "FAILED" });
-    await this.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: caseId, event_type: verified ? "VERIFICATION_SUCCESS" : "VERIFICATION_FAILED", payload: { verification_id: verificationId } });
+
+    await this.supabase.from("rs_verifications").insert({
+      verification_id: verificationId, action_id: actionId, case_id: caseId,
+      authoritative_source: "rs_synthetic_refunds", evidence_ids: evidenceIds,
+      expected_postconditions: ["status==SUCCESS", "amount==contract.amount", "payment_id==contract.target"],
+      observed_state: observed, predicate_results: predicateResults, result: verified ? "VERIFIED" : "FAILED",
+    });
+    await this.supabase.from("rs_case_events").insert({
+      event_id: crypto.randomUUID(), case_id: caseId,
+      event_type: verified ? "VERIFICATION_SUCCESS" : "VERIFICATION_FAILED",
+      payload: { verification_id: verificationId, predicate_results: predicateResults },
+    });
 
     if (verified) {
       status = await this.transition(caseId, status, "RESOLVED", "CASE_RESOLVED", { verification_id: verificationId });
-      await this.supabase.from("rs_resolution_passports").insert({ passport_id: `PASS-${crypto.randomUUID().slice(0, 8)}`, case_id: caseId, reported_problem: caseRow.raw_complaint, actual_problem: contract.problem, evidence_ids: [evPay, evOrd], decision_id: decisionId, policy_id: contract.policy_reference, risk_level: level, action_id: actionId, action_result: refundRow, verification_id: verificationId, final_state: "RESOLVED" });
-      await this.supabase.from("rs_cases").update({ action_status: "COMPLETED", verification_status: "VERIFIED", final_state: "RESOLVED", risk_level: level, authorization_state: authState }).eq("case_id", caseId);
-      await this.finish(caseId, "Payment succeeded but order creation failed downstream, leaving the customer charged with no order.", `We confirmed you were charged ${contract.proposed_action.currency} ${contract.proposed_action.amount} for an order that failed to create. A refund of ${contract.proposed_action.currency} ${contract.proposed_action.amount} has been issued to the original payment method and we verified it against our payment records (simulated in this demo environment). You should see it within 5-7 business days.`);
-    } else {
-      const reopenedCount = (caseRow.reopened_count ?? 0) + 1;
-      if (reopenedCount >= 2) {
-        status = await this.transition(caseId, status, "ESCALATED", "ESCALATED_TO_HUMAN", { reason: "VERIFICATION_FAILED_TWICE" });
-      } else {
-        status = await this.transition(caseId, status, "REOPENED", "CASE_REOPENED", { verification_id: verificationId });
-      }
-      await this.supabase.from("rs_cases").update({ reopened_count: reopenedCount }).eq("case_id", caseId);
+      await this.supabase.from("rs_resolution_passports").upsert({
+        passport_id: `PASS-${crypto.randomUUID().slice(0, 8)}`, case_id: caseId,
+        reported_problem: caseRow.raw_complaint, actual_problem: contract.problem, evidence_ids: evidenceIds,
+        decision_id: decisionId, policy_id: contract.policy_reference, risk_level: level,
+        action_id: actionId, action_result: refundRow, verification_id: verificationId, final_state: "RESOLVED",
+      });
+      await this.supabase.from("rs_cases").update({
+        action_status: "COMPLETED", verification_status: "VERIFIED", final_state: "RESOLVED",
+        risk_level: level, authorization_state: authState,
+      }).eq("case_id", caseId);
+      await this.finish(
+        caseId,
+        "Payment succeeded but order creation failed downstream, leaving the customer charged with no order.",
+        `We confirmed you were charged ${contract.proposed_action.currency} ${contract.proposed_action.amount} for an order that failed to create. A refund of ${contract.proposed_action.currency} ${contract.proposed_action.amount} has been issued to the original payment method and verified against the authoritative refund record. This demo uses a synthetic refund provider, so no real money movement occurred.`,
+      );
+      return { case_id: caseId, status, decision: authState, contract_hash: hash, verification: "VERIFIED", qwen_used: qwenUsed, qwen_error: qwenError || undefined };
     }
 
-    return { case_id: caseId, status, decision: authState, contract_hash: hash, verification: verified ? "VERIFIED" : "FAILED", qwen_used: qwenUsed };
+    const reopenedCount = (caseRow.reopened_count ?? 0) + 1;
+    await this.supabase.from("rs_cases").update({ reopened_count: reopenedCount, verification_status: "FAILED" }).eq("case_id", caseId);
+    if (reopenedCount >= 2) {
+      status = await this.transition(caseId, status, "ESCALATED", "ESCALATED_TO_HUMAN", { reason: "VERIFICATION_FAILED_TWICE" });
+    } else {
+      status = await this.transition(caseId, status, "REOPENED", "CASE_REOPENED", { verification_id: verificationId });
+    }
+    return { case_id: caseId, status, decision: authState, contract_hash: hash, verification: "FAILED", qwen_used: qwenUsed, qwen_error: qwenError || undefined };
   }
 
   async runEvidenceGap(caseId: string) {
