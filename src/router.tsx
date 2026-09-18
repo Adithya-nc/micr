@@ -2,6 +2,7 @@ import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import Login from './pages/Login'
 import Submit from './pages/Submit'
+import CustomerChat from './pages/CustomerChat'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import ErrorPage from './pages/Error'
@@ -21,6 +22,7 @@ export const routers = [
   { path: '/', name: 'landing', element: <Index /> },
   { path: '/login', name: 'login', element: <Login /> },
   { path: '/submit', name: 'submit', element: <Submit /> },
+  { path: '/chat', name: 'customer-chat', element: <CustomerChat /> },
   { path: '/app', name: 'dashboard', element: <CommandCenter /> },
   { path: '/app/cases', name: 'case-list', element: <CaseList /> },
   { path: '/app/cases/:caseId', name: 'active-case', element: <ActiveCase /> },

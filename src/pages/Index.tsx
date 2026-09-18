@@ -12,6 +12,7 @@ const Index = () => (
           <span className="font-semibold">ResolveSphere AI</span>
         </div>
         <div className="flex items-center gap-3">
+          <Link to="/chat" className="text-sm text-muted-foreground hover:text-foreground">Customer chat</Link>
           <Link to="/login" className="text-sm text-muted-foreground hover:text-foreground">Sign in</Link>
           <ThemeToggle />
         </div>
@@ -25,7 +26,7 @@ const Index = () => (
           Autonomous customer support that investigates evidence, applies policy, takes safe action, verifies the result, and escalates when needed.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button asChild><Link to="/submit">Submit a request</Link></Button>
+          <Button asChild><Link to="/chat">Start customer chat</Link></Button>
           <Button asChild variant="outline"><Link to="/app">Open support workspace</Link></Button>
         </div>
       </div>

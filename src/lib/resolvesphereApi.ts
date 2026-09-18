@@ -28,7 +28,7 @@ export type CaseDetail = {
   decisions: { decision_id: string; policy_id: string; risk_score: number; auth_state: string; evidence_ids: string[]; reason_codes?: string[]; risk_factors?: { gaps?: string[]; level?: string } }[]
   actions: { action_id: string; action_type: string; target_id: string; status: string; idempotency_key: string; retry_count: number; error_code: string | null; simulated: boolean }[]
   verifications: { verification_id: string; result: string; expected_postconditions: string[]; observed_state: Record<string, unknown>; predicate_results: Record<string, boolean>; verified_at: string; failure_reason: string | null }[]
-  approvals: unknown[]
+  approvals: { approval_id: string; case_id: string; contract_hash: string; action_type: string; target_id: string; amount: number; policy_version: string; risk_score: number; approval_status: string; requested_at: string; expires_at: string | null; approved_by: string | null; approved_at: string | null }[]
   passport: Record<string, unknown> | null
   twin: { twin: Record<string, unknown> } | null
 }
@@ -109,6 +109,7 @@ export function useCustomers() {
   return useQuery({
     queryKey: ['customers'],
     queryFn: () => invokeEngine<{ ok: boolean; customers: CustomerRow[] }>('list_customers'),
+    refetchInterval: 5000,
   })
 }
 
@@ -116,6 +117,7 @@ export function useKnowledge() {
   return useQuery({
     queryKey: ['knowledge'],
     queryFn: () => invokeEngine<{ ok: boolean; policies: { policy_id: string; version: string; rule_text: string }[] }>('list_knowledge'),
+    refetchInterval: 5000,
   })
 }
 
@@ -149,6 +151,49 @@ export function useEngineAction(action: string) {
       client.invalidateQueries({ queryKey: ['case'] })
       client.invalidateQueries({ queryKey: ['backend-status'] })
       client.invalidateQueries({ queryKey: ['radar'] })
+    },
+  })
+}
+
+export function useCustomerCases(customerId: string | undefined) {
+  return useQuery({
+    queryKey: ['customer-cases', customerId],
+    queryFn: () => invokeEngine<{ ok: boolean; cases: { case_id: string; status: string; primary_intent: string; raw_complaint: string; customer_response: string | null; updated_at: string }[] }>('get_customer_cases', { customer_id: customerId }),
+    enabled: Boolean(customerId),
+    refetchInterval: 3000,
+  })
+}
+
+export function useAnswerQuestion() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { customer_id: string; answer: string }) => invokeEngine('answer_question', input),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['customer-cases'] })
+      client.invalidateQueries({ queryKey: ['cases'] })
+    },
+  })
+}
+
+export function useApproveAction() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (approvalId: string) => invokeEngine('approve_action', { approval_id: approvalId }),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['approvals'] })
+      client.invalidateQueries({ queryKey: ['case'] })
+    },
+  })
+}
+
+export function useRejectAction() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { approval_id: string; reason: string }) => invokeEngine('reject_action', input),
+    onSuccess: () => {
+      client.invalidateQueries({ queryKey: ['approvals'] })
+      client.invalidateQueries({ queryKey: ['case'] })
+      client.invalidateQueries({ queryKey: ['cases'] })
     },
   })
 }

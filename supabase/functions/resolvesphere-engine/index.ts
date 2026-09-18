@@ -469,7 +469,7 @@ class Engine {
     await this.handoff(caseId, caseRow.assigned_agent ?? "Billing & Payments Agent", "Knowledge & Policy Agent", "Retrieved applicable policy before proposing a resolution");
 
     const evidenceRows = (await this.supabase.from("rs_evidence_ledger").select("evidence_id,field_name,value,authority_level,status,observed_at,source_type").eq("case_id", caseId).eq("status", "ACTIVE")).data ?? [];
-    const { result: sufficient, gaps } = sufficiencyOf(evidenceRows as any);
+    const { result: sufficient, gaps } = sufficiencyOf(evidenceRows as { field_name: string; value: unknown; authority_level: string; status: string; observed_at: string; source_type: string }[]);
 
     if (sufficient !== "SUFFICIENT") {
       const { score, level } = riskOf(Number(payment?.amount ?? 0), gaps, caseRow.urgency ?? "MEDIUM", caseRow.reopened_count ?? 0);
@@ -898,6 +898,44 @@ Deno.serve(async (req) => {
     if (action === "reset_demo") {
       const result = await engine.resetDemo();
       return new Response(JSON.stringify({ ok: true, result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (action === "get_customer_cases") {
+      const { customer_id } = body;
+      if (!customer_id) return new Response(JSON.stringify({ ok: false, error: "customer_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data } = await engine.supabase.from("rs_cases").select("case_id, status, primary_intent, raw_complaint, customer_response, updated_at").eq("customer_id", customer_id).order("created_at", { ascending: false });
+      return new Response(JSON.stringify({ ok: true, cases: data }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (action === "answer_question") {
+      const { customer_id, answer } = body;
+      if (!customer_id || !answer) return new Response(JSON.stringify({ ok: false, error: "customer_id and answer required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data: caseData } = await engine.supabase.from("rs_cases").select("case_id, status").eq("customer_id", customer_id).eq("status", "EVIDENCE_GAP").maybeSingle();
+      if (!caseData) return new Response(JSON.stringify({ ok: false, error: "No open case awaiting customer answer" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const now = new Date().toISOString();
+      const evAns = `EV-${crypto.randomUUID().slice(0, 8)}`;
+      await engine.supabase.from("rs_evidence_ledger").insert({ evidence_id: evAns, case_id: caseData.case_id, source_system: "Customer", source_record_id: caseData.case_id, source_type: "CUSTOMER_STATEMENT", field_name: "customer_answer", value: answer, authority_level: "CUSTOMER_STATEMENT", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "customer_chat", relevance: "Customer response to evidence gap question", status: "ACTIVE" });
+      await engine.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: caseData.case_id, event_type: "ANSWER_RECEIVED", payload: { evidence_id: evAns, answer } });
+      return new Response(JSON.stringify({ ok: true, result: { case_id: caseData.case_id, status: "INVESTIGATING" } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (action === "approve_action") {
+      const { approval_id } = body;
+      if (!approval_id) return new Response(JSON.stringify({ ok: false, error: "approval_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data: approval } = await engine.supabase.from("rs_approvals").select("*").eq("approval_id", approval_id).maybeSingle();
+      if (!approval) return new Response(JSON.stringify({ ok: false, error: "Approval not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (approval.approval_status !== "PENDING") return new Response(JSON.stringify({ ok: false, error: `Approval already ${approval.approval_status}` }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      await engine.supabase.from("rs_approvals").update({ approval_status: "GRANTED", approved_by: "admin", approved_at: new Date().toISOString() }).eq("approval_id", approval_id);
+      await engine.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: approval.case_id, event_type: "APPROVAL_GRANTED", payload: { approval_id } });
+      return new Response(JSON.stringify({ ok: true, result: { approval_id, status: "GRANTED" } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (action === "reject_action") {
+      const { approval_id, reason } = body;
+      if (!approval_id) return new Response(JSON.stringify({ ok: false, error: "approval_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data: approval } = await engine.supabase.from("rs_approvals").select("*").eq("approval_id", approval_id).maybeSingle();
+      if (!approval) return new Response(JSON.stringify({ ok: false, error: "Approval not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (approval.approval_status !== "PENDING") return new Response(JSON.stringify({ ok: false, error: `Approval already ${approval.approval_status}` }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      await engine.supabase.from("rs_approvals").update({ approval_status: "REJECTED", approved_by: "admin", approved_at: new Date().toISOString() }).eq("approval_id", approval_id);
+      await engine.supabase.from("rs_cases").update({ status: "ESCALATED", escalation_reason: reason ?? "APPROVAL_REJECTED" }).eq("case_id", approval.case_id);
+      await engine.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: approval.case_id, event_type: "APPROVAL_REJECTED", payload: { approval_id, reason } });
+      return new Response(JSON.stringify({ ok: true, result: { approval_id, status: "REJECTED" } }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     return new Response(JSON.stringify({ ok: false, error: "unknown action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
