@@ -10,6 +10,7 @@ export type CaseRow = {
   case_id: string
   customer_id: string
   customer_name: string | null
+  customer_email?: string | null
   status: string
   urgency: string
   sentiment: string
@@ -19,6 +20,7 @@ export type CaseRow = {
   assigned_agent: string | null
   category: string | null
   primary_intent: string | null
+  reference_id?: string | null
   updated_at: string
 }
 
