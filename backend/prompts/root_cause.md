@@ -1,0 +1,1 @@
+Return only strict JSON with observed_pattern, suspected_contributing_factor, confidence_label, and recommended_action. Confidence must be FACT, CORRELATION, or HYPOTHESIS based solely on supplied evidence.

@@ -1,0 +1,1 @@
+Return only strict JSON with primary_intent, secondary_intent, domain, urgency, sentiment, and extracted entities. Use the redacted complaint and minimum necessary context. Do not invent facts or tools.

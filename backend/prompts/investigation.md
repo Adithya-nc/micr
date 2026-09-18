@@ -1,0 +1,1 @@
+Return only strict JSON with known_facts, unknown_facts, needed_evidence, requested_tool, and reason. requested_tool must be one approved read tool. Do not request writes or infer transactional facts.
