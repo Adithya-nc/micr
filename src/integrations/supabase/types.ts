@@ -3360,7 +3360,898 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      rs_actions: {
+        Row: {
+          action_id: string
+          action_type: string
+          amount: number | null
+          case_id: string
+          completed_at: string | null
+          contract_hash: string
+          created_at: string
+          currency: string | null
+          decision_id: string | null
+          error_code: string | null
+          idempotency_key: string
+          request_payload: Json | null
+          response_payload: Json | null
+          retry_count: number
+          simulated: boolean
+          status: string
+          target_id: string
+        }
+        Insert: {
+          action_id: string
+          action_type: string
+          amount?: number | null
+          case_id: string
+          completed_at?: string | null
+          contract_hash: string
+          created_at?: string
+          currency?: string | null
+          decision_id?: string | null
+          error_code?: string | null
+          idempotency_key: string
+          request_payload?: Json | null
+          response_payload?: Json | null
+          retry_count?: number
+          simulated?: boolean
+          status: string
+          target_id: string
+        }
+        Update: {
+          action_id?: string
+          action_type?: string
+          amount?: number | null
+          case_id?: string
+          completed_at?: string | null
+          contract_hash?: string
+          created_at?: string
+          currency?: string | null
+          decision_id?: string | null
+          error_code?: string | null
+          idempotency_key?: string
+          request_payload?: Json | null
+          response_payload?: Json | null
+          retry_count?: number
+          simulated?: boolean
+          status?: string
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_actions_case_id_fkey"
+            columns: ["case_id"]
+            referencedRelation: "rs_cases"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "rs_actions_decision_id_fkey"
+            columns: ["decision_id"]
+            referencedRelation: "rs_decisions"
+            referencedColumns: ["decision_id"]
+          },
+        ]
+      }
+      rs_approvals: {
+        Row: {
+          action_type: string
+          amount: number | null
+          approval_id: string
+          approval_status: string
+          approved_by: string | null
+          case_id: string
+          contract_hash: string
+          decision_id: string
+          expires_at: string | null
+          policy_version: string | null
+          requested_at: string
+          risk_score: number | null
+          target_id: string
+        }
+        Insert: {
+          action_type: string
+          amount?: number | null
+          approval_id: string
+          approval_status?: string
+          approved_by?: string | null
+          case_id: string
+          contract_hash: string
+          decision_id: string
+          expires_at?: string | null
+          policy_version?: string | null
+          requested_at?: string
+          risk_score?: number | null
+          target_id: string
+        }
+        Update: {
+          action_type?: string
+          amount?: number | null
+          approval_id?: string
+          approval_status?: string
+          approved_by?: string | null
+          case_id?: string
+          contract_hash?: string
+          decision_id?: string
+          expires_at?: string | null
+          policy_version?: string | null
+          requested_at?: string
+          risk_score?: number | null
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_approvals_case_id_fkey"
+            columns: ["case_id"]
+            referencedRelation: "rs_cases"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "rs_approvals_decision_id_fkey"
+            columns: ["decision_id"]
+            referencedRelation: "rs_decisions"
+            referencedColumns: ["decision_id"]
+          },
+        ]
+      }
+      rs_case_events: {
+        Row: {
+          case_id: string
+          created_at: string
+          event_id: string
+          event_type: string
+          payload: Json
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          event_id: string
+          event_type: string
+          payload?: Json
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_case_events_case_id_fkey"
+            columns: ["case_id"]
+            referencedRelation: "rs_cases"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      rs_case_twins: {
+        Row: {
+          case_id: string
+          created_at: string
+          twin: Json
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          twin: Json
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          twin?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_case_twins_case_id_fkey"
+            columns: ["case_id"]
+            referencedRelation: "rs_cases"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      rs_cases: {
+        Row: {
+          action_status: string | null
+          authorization_state: string | null
+          case_id: string
+          created_at: string
+          current_stage: string | null
+          customer_id: string
+          domain: string[] | null
+          escalation_reason: string | null
+          final_state: string | null
+          label: string
+          parent_case_id: string | null
+          primary_intent: string | null
+          raw_complaint: string
+          reopened_count: number
+          risk_level: string | null
+          secondary_intent: string | null
+          sentiment: string | null
+          sla_state: string | null
+          status: string
+          ticket_id: string | null
+          updated_at: string
+          urgency: string | null
+          verification_status: string | null
+        }
+        Insert: {
+          action_status?: string | null
+          authorization_state?: string | null
+          case_id: string
+          created_at?: string
+          current_stage?: string | null
+          customer_id: string
+          domain?: string[] | null
+          escalation_reason?: string | null
+          final_state?: string | null
+          label?: string
+          parent_case_id?: string | null
+          primary_intent?: string | null
+          raw_complaint: string
+          reopened_count?: number
+          risk_level?: string | null
+          secondary_intent?: string | null
+          sentiment?: string | null
+          sla_state?: string | null
+          status?: string
+          ticket_id?: string | null
+          updated_at?: string
+          urgency?: string | null
+          verification_status?: string | null
+        }
+        Update: {
+          action_status?: string | null
+          authorization_state?: string | null
+          case_id?: string
+          created_at?: string
+          current_stage?: string | null
+          customer_id?: string
+          domain?: string[] | null
+          escalation_reason?: string | null
+          final_state?: string | null
+          label?: string
+          parent_case_id?: string | null
+          primary_intent?: string | null
+          raw_complaint?: string
+          reopened_count?: number
+          risk_level?: string | null
+          secondary_intent?: string | null
+          sentiment?: string | null
+          sla_state?: string | null
+          status?: string
+          ticket_id?: string | null
+          updated_at?: string
+          urgency?: string | null
+          verification_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_cases_parent_case_id_fkey"
+            columns: ["parent_case_id"]
+            referencedRelation: "rs_cases"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      rs_decisions: {
+        Row: {
+          auth_state: string
+          case_id: string
+          contract_hash: string
+          contract_version: string
+          created_at: string
+          decision: string
+          decision_id: string
+          evidence_ids: string[]
+          policy_id: string | null
+          policy_version: string | null
+          reason_codes: string[]
+          risk_factors: Json
+          risk_score: number
+        }
+        Insert: {
+          auth_state: string
+          case_id: string
+          contract_hash: string
+          contract_version?: string
+          created_at?: string
+          decision: string
+          decision_id: string
+          evidence_ids: string[]
+          policy_id?: string | null
+          policy_version?: string | null
+          reason_codes?: string[]
+          risk_factors?: Json
+          risk_score: number
+        }
+        Update: {
+          auth_state?: string
+          case_id?: string
+          contract_hash?: string
+          contract_version?: string
+          created_at?: string
+          decision?: string
+          decision_id?: string
+          evidence_ids?: string[]
+          policy_id?: string | null
+          policy_version?: string | null
+          reason_codes?: string[]
+          risk_factors?: Json
+          risk_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_decisions_case_id_fkey"
+            columns: ["case_id"]
+            referencedRelation: "rs_cases"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      rs_evidence_ledger: {
+        Row: {
+          authority_level: string
+          case_id: string
+          created_at: string
+          evidence_id: string
+          field_name: string
+          freshness_status: string
+          observed_at: string
+          relevance: string
+          retrieval_method: string
+          retrieved_at: string
+          source_record_id: string
+          source_system: string
+          source_type: string
+          status: string
+          value: Json
+        }
+        Insert: {
+          authority_level: string
+          case_id: string
+          created_at?: string
+          evidence_id: string
+          field_name: string
+          freshness_status: string
+          observed_at: string
+          relevance: string
+          retrieval_method: string
+          retrieved_at: string
+          source_record_id: string
+          source_system: string
+          source_type: string
+          status?: string
+          value: Json
+        }
+        Update: {
+          authority_level?: string
+          case_id?: string
+          created_at?: string
+          evidence_id?: string
+          field_name?: string
+          freshness_status?: string
+          observed_at?: string
+          relevance?: string
+          retrieval_method?: string
+          retrieved_at?: string
+          source_record_id?: string
+          source_system?: string
+          source_type?: string
+          status?: string
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_evidence_ledger_case_id_fkey"
+            columns: ["case_id"]
+            referencedRelation: "rs_cases"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      rs_historical_resolutions: {
+        Row: {
+          case_ref: string | null
+          error_code: string | null
+          label: string
+          outcome: string | null
+          problem_pattern: string
+          resolution_id: string
+        }
+        Insert: {
+          case_ref?: string | null
+          error_code?: string | null
+          label?: string
+          outcome?: string | null
+          problem_pattern: string
+          resolution_id: string
+        }
+        Update: {
+          case_ref?: string | null
+          error_code?: string | null
+          label?: string
+          outcome?: string | null
+          problem_pattern?: string
+          resolution_id?: string
+        }
+        Relationships: []
+      }
+      rs_idempotency_ledger: {
+        Row: {
+          action_id: string | null
+          action_type: string
+          case_id: string
+          contract_hash: string
+          created_at: string
+          idempotency_key: string
+          result_payload: Json | null
+          status: string
+          target_id: string
+          updated_at: string
+        }
+        Insert: {
+          action_id?: string | null
+          action_type: string
+          case_id: string
+          contract_hash: string
+          created_at?: string
+          idempotency_key: string
+          result_payload?: Json | null
+          status: string
+          target_id: string
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string | null
+          action_type?: string
+          case_id?: string
+          contract_hash?: string
+          created_at?: string
+          idempotency_key?: string
+          result_payload?: Json | null
+          status?: string
+          target_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_idempotency_ledger_action_id_fkey"
+            columns: ["action_id"]
+            referencedRelation: "rs_actions"
+            referencedColumns: ["action_id"]
+          },
+          {
+            foreignKeyName: "rs_idempotency_ledger_case_id_fkey"
+            columns: ["case_id"]
+            referencedRelation: "rs_cases"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      rs_outcome_memory: {
+        Row: {
+          action_type: string | null
+          case_id: string
+          created_at: string
+          evidence_summary: string | null
+          memory_id: string
+          outcome: string | null
+          policy_reference: string | null
+          problem_pattern: string | null
+          verification_status: string | null
+        }
+        Insert: {
+          action_type?: string | null
+          case_id: string
+          created_at?: string
+          evidence_summary?: string | null
+          memory_id: string
+          outcome?: string | null
+          policy_reference?: string | null
+          problem_pattern?: string | null
+          verification_status?: string | null
+        }
+        Update: {
+          action_type?: string | null
+          case_id?: string
+          created_at?: string
+          evidence_summary?: string | null
+          memory_id?: string
+          outcome?: string | null
+          policy_reference?: string | null
+          problem_pattern?: string | null
+          verification_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_outcome_memory_case_id_fkey"
+            columns: ["case_id"]
+            referencedRelation: "rs_cases"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
+      rs_policies: {
+        Row: {
+          label: string
+          policy_id: string
+          rule_text: string
+          version: string
+        }
+        Insert: {
+          label?: string
+          policy_id: string
+          rule_text: string
+          version: string
+        }
+        Update: {
+          label?: string
+          policy_id?: string
+          rule_text?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      rs_resolution_passports: {
+        Row: {
+          action_id: string | null
+          action_result: Json | null
+          actual_problem: string | null
+          case_id: string
+          created_at: string
+          decision_id: string | null
+          evidence_ids: string[] | null
+          final_state: string | null
+          passport_id: string
+          policy_id: string | null
+          reported_problem: string | null
+          risk_level: string | null
+          verification_id: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          action_result?: Json | null
+          actual_problem?: string | null
+          case_id: string
+          created_at?: string
+          decision_id?: string | null
+          evidence_ids?: string[] | null
+          final_state?: string | null
+          passport_id: string
+          policy_id?: string | null
+          reported_problem?: string | null
+          risk_level?: string | null
+          verification_id?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          action_result?: Json | null
+          actual_problem?: string | null
+          case_id?: string
+          created_at?: string
+          decision_id?: string | null
+          evidence_ids?: string[] | null
+          final_state?: string | null
+          passport_id?: string
+          policy_id?: string | null
+          reported_problem?: string | null
+          risk_level?: string | null
+          verification_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_resolution_passports_action_id_fkey"
+            columns: ["action_id"]
+            referencedRelation: "rs_actions"
+            referencedColumns: ["action_id"]
+          },
+          {
+            foreignKeyName: "rs_resolution_passports_case_id_fkey"
+            columns: ["case_id"]
+            referencedRelation: "rs_cases"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "rs_resolution_passports_decision_id_fkey"
+            columns: ["decision_id"]
+            referencedRelation: "rs_decisions"
+            referencedColumns: ["decision_id"]
+          },
+          {
+            foreignKeyName: "rs_resolution_passports_verification_id_fkey"
+            columns: ["verification_id"]
+            referencedRelation: "rs_verifications"
+            referencedColumns: ["verification_id"]
+          },
+        ]
+      }
+      rs_synthetic_customers: {
+        Row: {
+          customer_id: string
+          label: string
+          name: string | null
+        }
+        Insert: {
+          customer_id: string
+          label?: string
+          name?: string | null
+        }
+        Update: {
+          customer_id?: string
+          label?: string
+          name?: string | null
+        }
+        Relationships: []
+      }
+      rs_synthetic_orders: {
+        Row: {
+          customer_id: string | null
+          error_code: string | null
+          label: string
+          order_id: string
+          payment_id: string | null
+          status: string
+        }
+        Insert: {
+          customer_id?: string | null
+          error_code?: string | null
+          label?: string
+          order_id: string
+          payment_id?: string | null
+          status: string
+        }
+        Update: {
+          customer_id?: string | null
+          error_code?: string | null
+          label?: string
+          order_id?: string
+          payment_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_synthetic_orders_customer_id_fkey"
+            columns: ["customer_id"]
+            referencedRelation: "rs_synthetic_customers"
+            referencedColumns: ["customer_id"]
+          },
+          {
+            foreignKeyName: "rs_synthetic_orders_payment_id_fkey"
+            columns: ["payment_id"]
+            referencedRelation: "rs_synthetic_payments"
+            referencedColumns: ["payment_id"]
+          },
+        ]
+      }
+      rs_synthetic_payments: {
+        Row: {
+          amount: number
+          currency: string
+          customer_id: string | null
+          label: string
+          payment_id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          currency: string
+          customer_id?: string | null
+          label?: string
+          payment_id: string
+          status: string
+        }
+        Update: {
+          amount?: number
+          currency?: string
+          customer_id?: string | null
+          label?: string
+          payment_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_synthetic_payments_customer_id_fkey"
+            columns: ["customer_id"]
+            referencedRelation: "rs_synthetic_customers"
+            referencedColumns: ["customer_id"]
+          },
+        ]
+      }
+      rs_synthetic_products: {
+        Row: {
+          label: string
+          name: string | null
+          product_id: string
+        }
+        Insert: {
+          label?: string
+          name?: string | null
+          product_id: string
+        }
+        Update: {
+          label?: string
+          name?: string | null
+          product_id?: string
+        }
+        Relationships: []
+      }
+      rs_synthetic_refunds: {
+        Row: {
+          amount: number
+          currency: string
+          label: string
+          payment_id: string | null
+          refund_id: string
+          status: string
+          support_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          currency: string
+          label?: string
+          payment_id?: string | null
+          refund_id: string
+          status: string
+          support_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          currency?: string
+          label?: string
+          payment_id?: string | null
+          refund_id?: string
+          status?: string
+          support_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_synthetic_refunds_payment_id_fkey"
+            columns: ["payment_id"]
+            referencedRelation: "rs_synthetic_payments"
+            referencedColumns: ["payment_id"]
+          },
+        ]
+      }
+      rs_synthetic_ticket_messages: {
+        Row: {
+          body: string | null
+          label: string
+          message_id: string
+          ticket_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          label?: string
+          message_id: string
+          ticket_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          label?: string
+          message_id?: string
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_synthetic_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            referencedRelation: "rs_synthetic_tickets"
+            referencedColumns: ["ticket_id"]
+          },
+        ]
+      }
+      rs_synthetic_tickets: {
+        Row: {
+          body: string | null
+          customer_id: string | null
+          label: string
+          ticket_id: string
+        }
+        Insert: {
+          body?: string | null
+          customer_id?: string | null
+          label?: string
+          ticket_id: string
+        }
+        Update: {
+          body?: string | null
+          customer_id?: string | null
+          label?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_synthetic_tickets_customer_id_fkey"
+            columns: ["customer_id"]
+            referencedRelation: "rs_synthetic_customers"
+            referencedColumns: ["customer_id"]
+          },
+        ]
+      }
+      rs_system_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          label: string
+          occurred_at: string
+          service: string
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          label?: string
+          occurred_at: string
+          service: string
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          label?: string
+          occurred_at?: string
+          service?: string
+        }
+        Relationships: []
+      }
+      rs_verifications: {
+        Row: {
+          action_id: string
+          authoritative_source: string
+          case_id: string
+          evidence_ids: string[]
+          expected_postconditions: Json
+          failure_reason: string | null
+          observed_state: Json
+          predicate_results: Json
+          result: string
+          verification_id: string
+          verified_at: string
+        }
+        Insert: {
+          action_id: string
+          authoritative_source: string
+          case_id: string
+          evidence_ids?: string[]
+          expected_postconditions: Json
+          failure_reason?: string | null
+          observed_state: Json
+          predicate_results: Json
+          result: string
+          verification_id: string
+          verified_at?: string
+        }
+        Update: {
+          action_id?: string
+          authoritative_source?: string
+          case_id?: string
+          evidence_ids?: string[]
+          expected_postconditions?: Json
+          failure_reason?: string | null
+          observed_state?: Json
+          predicate_results?: Json
+          result?: string
+          verification_id?: string
+          verified_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rs_verifications_action_id_fkey"
+            columns: ["action_id"]
+            referencedRelation: "rs_actions"
+            referencedColumns: ["action_id"]
+          },
+          {
+            foreignKeyName: "rs_verifications_case_id_fkey"
+            columns: ["case_id"]
+            referencedRelation: "rs_cases"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

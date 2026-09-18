@@ -24,11 +24,42 @@
     --input: 220 13% 91%;
     --ring: 221 83% 53%;
     --success: 160 84% 31%;
+    --success-foreground: 0 0% 100%;
     --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 100%;
     --radius: .5rem;
+  }
+  .dark {
+    --background: 222 47% 7%;
+    --foreground: 210 20% 98%;
+    --card: 221 39% 11%;
+    --card-foreground: 210 20% 98%;
+    --popover: 221 39% 11%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 213 94% 68%;
+    --primary-foreground: 222 47% 7%;
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 28% 17%;
+    --muted-foreground: 218 11% 78%;
+    --accent: 215 28% 20%;
+    --accent-foreground: 213 94% 78%;
+    --destructive: 0 91% 71%;
+    --destructive-foreground: 222 47% 7%;
+    --border: 217 19% 27%;
+    --input: 217 19% 27%;
+    --ring: 213 94% 68%;
+    --success: 158 64% 52%;
+    --success-foreground: 222 47% 7%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 222 47% 7%;
   }
   * { @apply border-border; }
   body { @apply m-0 bg-background font-sans text-foreground antialiased; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   html, body, #root { min-height: 100%; }
   button:focus-visible, a:focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }

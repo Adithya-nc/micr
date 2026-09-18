@@ -1,11 +1,9 @@
 # Backend Function Interfaces
 
-- `fn_case_intake`: POST complaint, customer identifier, timestamp, channel.
-- `fn_build_case_twin`: create redacted minimum-context Case Twin.
-- `fn_fetch_evidence`: execute an allow-listed read tool and append provenance.
-- `fn_validate_contract`: Pydantic validation plus deterministic Trust Layer output.
-- `fn_execute_action` and `fn_trigger_refund`: idempotent authorized SIMULATED action path.
-- `fn_verify_action`: authoritative predicate receipt path.
-- `fn_reopen_case`, `fn_escalate_case`, `fn_customer_question`, `fn_approval_request`, `fn_approval_decision`, `fn_root_cause_radar`, `fn_reset_demo_data`: lifecycle functions.
+Deployed Enter Cloud backend functions (`supabase/functions/*`):
 
-The UI reads cases, events, evidence, decisions, actions, verifications, approvals, passports, escalations, radar incidents, and test results through backend interfaces only.
+- `resolvesphere-status` — `fn_backend_status`. Returns the exact JSON contract with `checks[]`, computed live from the database and environment; never hardcoded.
+- `resolvesphere-engine` — action-routed deterministic engine. Actions: `list_cases`, `get_case`, `list_approvals`, `list_events`, `run_autonomous`, `run_evidence_gap`, `run_contradiction`, `run_radar`, `reset_demo`.
+- `resolvesphere-qwen` — standalone bounded Qwen proposal caller (used for isolated testing; `run_autonomous` also calls Qwen inline).
+
+The frontend calls these exclusively through `supabase.functions.invoke` (see `src/lib/resolvesphereApi.ts`); no raw HTTP calls, no service-role key in the browser.

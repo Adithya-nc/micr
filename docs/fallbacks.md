@@ -1,10 +1,8 @@
 # Fallbacks
 
-- Knowledge: use versioned policy and SOP files plus the `policies` table; policy text never proves transactional state.
-- Workflows: chain deterministic backend functions only after Trust Layer authorization.
-- Realtime: poll lightweight case-event endpoints every three seconds on Active Case.
-- Auth: show a `[DEMO ENVIRONMENT]` role selector until role-based backend auth is configured.
-- Python/Pydantic: Pydantic models are included as the authoritative validation artifact. Runtime validation is pending a Python-capable backend deployment; frontend Zod is not a replacement.
-- Runtime Qwen: use the strongest available Qwen reasoning model only after model protocol is confirmed. An admin-only `[DEMO FALLBACK]` may inject a pre-validated mock contract if runtime reasoning is unavailable.
-- Workflow failure: an admin-only `[DEMO FALLBACK]` may simulate execution workflow completion, never verification.
-- Contradiction testing: an admin-only `[DEMO FALLBACK]` may insert conflicting evidence, visibly labelled.
+- Python/Pydantic: Enter Cloud backend functions run on the Deno/TypeScript runtime; there is no Python runtime available. Pydantic cannot execute in this environment. The authoritative backend validator is a Zod schema (`ContractSchema` in `supabase/functions/resolvesphere-engine/index.ts`), enforced server-side before any write action. This is a platform constraint, not a design preference.
+- Knowledge: `rs_policies` table serves as the semantic policy/SOP fallback; Enter Knowledge (RAG) was not available as a separate managed capability in this workspace.
+- Workflows: sequential deterministic steps inside `resolvesphere-engine` (transition → evidence → sufficiency → contradiction → policy → risk → authorization → idempotent action → verification) replace a dedicated workflow orchestrator, which was not exposed as a distinct EnterPro capability in this workspace.
+- Auth: Enter Cloud Auth is not connected. A `[DEMO AUTH FALLBACK]` role switcher (`src/lib/demoAuth.tsx`) gates routes in the application layer only; it is not a security boundary.
+- Realtime: Active Case, Command Center, and Status pages poll every 3 seconds via React Query instead of a Postgres realtime subscription.
+- Root-Cause Radar and reset are computed live per request rather than through a separate incidents table, since Scenario 4 does not require persisted incident records.

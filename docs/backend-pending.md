@@ -1,20 +1,20 @@
 # Backend Pending
 
-## Missing
-- ResolveSphere database schema (`backend/schema/resolvesphere.sql`) not yet migrated into Enter Cloud Postgres.
-- No Enter Cloud Postgres tables exist (confirmed via schema inspection).
-- No backend functions deployed (`backend/functions/*` are local Python interfaces, not deployed Enter Cloud functions).
-- No workflows configured (refund, approval, escalation, verification).
-- No Enter Cloud Auth role integration; a demo role switcher is used instead.
-- No seed data loaded (`backend/seed/demo_data.sql` not executed).
-- No verification engine deployed; no Verification Receipts exist.
-- No golden or adversarial tests executed against a live backend.
+## Connected in this session
+- Enter Cloud Postgres schema (`rs_*` tables) is migrated and RLS-enabled with read policies.
+- Synthetic seed data for all four demo scenarios, POL-001..007, and EVT-501 is loaded.
+- `resolvesphere-status`, `resolvesphere-engine`, and `resolvesphere-qwen` backend functions are deployed and live.
+- The deterministic Trust Layer (schema validation via Zod, evidence sufficiency/freshness, contradiction detection, policy guard, risk engine, authorization, idempotency, verification) runs inside `resolvesphere-engine` against real database rows.
+- One bounded live Qwen call (`alibaba/qwen-3.8-max`) proposes the Resolution Contract for Scenario 1; Scenario 1 was run end-to-end and reached `RESOLVED` with a `VERIFIED` Verification Receipt.
+- Scenario 2 (evidence gap → one question → escalate under POL-007), Scenario 3 (contradiction → escalate), and Scenario 4 (radar incident candidate) were run end-to-end against real data.
+- The frontend Command Center, Active Case, Escalations, Approvals, Root-Cause Radar, Testing/Admin, and Status pages read live backend data with 3-second polling, not mocks.
+
+## Still pending
+- Enter Cloud Auth is not connected; a `[DEMO AUTH FALLBACK]` role switcher gates routes at the application layer only.
+- GC-04 (approval above 5000 INR) and GC-05 (failed verification reopen) are implemented but not exercised, because no seeded case currently produces those paths.
+- Frontend build/typecheck (`pnpm check`, `pnpm run build`) has not been run in this session; see `docs/verification-commands.md`.
 
 ## Next implementation steps
-1. Review and apply `backend/schema/resolvesphere.sql` through the approved Enter Cloud migration flow, including RLS policies per role.
-2. Load `backend/seed/demo_data.sql` for the four demo scenarios after schema is confirmed.
-3. Port `backend/functions/*.py` deterministic logic to deployed Enter Cloud backend functions (TypeScript) and connect Pydantic-equivalent validation.
-4. Configure refund, approval, escalation, and verification workflows or sequential deterministic fallbacks.
-5. Connect Enter Cloud Auth and replace the demo role switcher with real role-based sessions.
-6. Wire `src/lib/backendStatus.ts` to a live status check once functions are deployed.
-7. Execute golden (`GC-01`–`GC-06`) and adversarial (`AT-01`–`AT-06`) tests and record actual results in `docs/test-results.md`.
+1. Connect Enter Cloud Auth and replace the demo role switcher with real sessions and RLS-scoped policies per role.
+2. Seed a >5000 INR case to exercise GC-04, and a corrupted-postcondition fixture to re-exercise AT-06/GC-05 on demand from the Testing page.
+3. Run the deferred frontend build/typecheck commands.

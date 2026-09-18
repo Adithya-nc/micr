@@ -5,9 +5,9 @@ export function StatusBadge({ value, tone }: { value: string; tone?: StatusTone 
   const styles: Record<StatusTone, string> = {
     neutral: 'bg-muted text-muted-foreground',
     info: 'bg-accent text-accent-foreground',
-    success: 'bg-[hsl(var(--success)/.12)] text-[hsl(var(--success))]',
-    warning: 'bg-[hsl(var(--warning)/.12)] text-[hsl(var(--warning))]',
-    danger: 'bg-destructive/10 text-destructive',
+    success: 'bg-success/15 text-success',
+    warning: 'bg-warning/15 text-warning',
+    danger: 'bg-destructive/15 text-destructive',
   }
-  return <span className={`inline-flex items-center rounded-sm px-2 py-1 text-xs font-medium ${styles[color]}`}>{value}</span>
+  return <span className={`inline-flex items-center gap-1 rounded-sm px-2 py-1 text-xs font-medium ${styles[color]}`}>{value}</span>
 }

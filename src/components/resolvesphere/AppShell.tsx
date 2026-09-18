@@ -1,25 +1,29 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { AlertTriangle, ClipboardCheck, FileSearch, LayoutDashboard, Radar, ShieldCheck, SlidersHorizontal, Activity } from 'lucide-react'
+import { AlertTriangle, ClipboardCheck, FileSearch, LayoutDashboard, Radar, ShieldCheck, SlidersHorizontal, Activity, ShieldAlert } from 'lucide-react'
 import { StatusBadge } from '@/components/resolvesphere/StatusBadge'
 import { FooterBar } from '@/components/resolvesphere/FooterBar'
 import { AccessRestrictedPanel } from '@/components/resolvesphere/AccessRestrictedPanel'
+import { ThemeToggle } from '@/components/resolvesphere/ThemeToggle'
+import { DemoAuthRoleSwitcher } from '@/components/resolvesphere/DemoAuthRoleSwitcher'
 import { canAccess, useDemoAuth, type PageKey } from '@/lib/demoAuth'
-import { getBackendStatus } from '@/lib/backendStatus'
+import { useBackendStatus } from '@/lib/resolvesphereApi'
 
 const navigation: { label: string; icon: typeof LayoutDashboard; path: string; page: PageKey }[] = [
   { label: 'Command Center', icon: LayoutDashboard, path: '/app', page: 'command-center' },
+  { label: 'Active Cases', icon: FileSearch, path: '/app/cases', page: 'active-case' },
   { label: 'Escalations', icon: AlertTriangle, path: '/escalations', page: 'escalations' },
   { label: 'Approvals', icon: ClipboardCheck, path: '/approvals', page: 'approvals' },
   { label: 'Root-Cause Radar', icon: Radar, path: '/radar', page: 'radar' },
   { label: 'Testing / Admin', icon: SlidersHorizontal, path: '/testing', page: 'testing' },
-  { label: 'Backend Status', icon: FileSearch, path: '/status', page: 'status' },
+  { label: 'Admin', icon: ShieldAlert, path: '/admin', page: 'testing' },
+  { label: 'Backend Status', icon: Activity, path: '/status', page: 'status' },
 ]
 
 export function AppShell({ page, title, children }: { page: PageKey; title: string; children: ReactNode }) {
   const { pathname } = useLocation()
   const { role } = useDemoAuth()
-  const status = getBackendStatus()
+  const { data: status } = useBackendStatus()
   const allowed = canAccess(role, page)
   return (
     <div className="min-h-screen bg-background">
@@ -35,7 +39,7 @@ export function AppShell({ page, title, children }: { page: PageKey; title: stri
           <nav aria-label="Primary" className="flex gap-1 overflow-x-auto p-3 lg:flex-col">
             {navigation.map((item) => {
               const Icon = item.icon
-              const active = pathname.startsWith(item.path) && item.path !== '/'
+              const active = pathname === item.path
               return (
                 <Link
                   key={item.path}
@@ -51,13 +55,16 @@ export function AppShell({ page, title, children }: { page: PageKey; title: stri
           <div className="hidden border-t p-4 text-xs text-muted-foreground lg:block">[DEMO ENVIRONMENT]<br />Synthetic enterprise data only</div>
         </aside>
         <div className="flex min-w-0 flex-col">
-          <header className="flex items-center justify-between border-b bg-card px-5 py-3">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-card px-5 py-3">
             <div className="flex items-center gap-2 text-sm">
               <Activity className="h-4 w-4 text-primary" />
               <span>Control Plane</span>
-              <StatusBadge value={status.database_connected ? 'Backend connected' : 'Backend pending'} tone={status.database_connected ? 'success' : 'warning'} />
+              <StatusBadge value={status?.overall_connected ? 'Backend connected' : 'Backend pending'} tone={status?.overall_connected ? 'success' : 'warning'} />
             </div>
-            <div className="text-xs text-muted-foreground">Case events are authoritative</div>
+            <div className="flex items-center gap-3">
+              <DemoAuthRoleSwitcher compact />
+              <ThemeToggle />
+            </div>
           </header>
           <main className="mx-auto w-full max-w-[1600px] flex-1 p-5">
             {allowed ? (

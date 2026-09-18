@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'
 import { DemoAuthRoleSwitcher } from '@/components/resolvesphere/DemoAuthRoleSwitcher'
+import { ThemeToggle } from '@/components/resolvesphere/ThemeToggle'
 
 const links = [
   { label: 'Overview', href: '#overview' },
@@ -28,6 +29,7 @@ export function LandingHeader() {
           )}
         </nav>
         <DemoAuthRoleSwitcher compact />
+        <ThemeToggle />
       </div>
     </header>
   )

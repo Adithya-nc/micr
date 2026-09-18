@@ -8,7 +8,7 @@ export function DemoAuthRoleSwitcher({ compact = false }: { compact?: boolean })
   return (
     <div className={compact ? 'flex items-center gap-2' : 'rounded-md border bg-card p-3'}>
       {!compact && (
-        <p className="mb-2 text-xs font-medium text-warning" style={{ color: 'hsl(var(--warning))' }}>
+        <p className="mb-2 text-xs font-medium text-warning">
           [DEMO AUTH FALLBACK] Real authentication is pending.
         </p>
       )}
