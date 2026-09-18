@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ShieldCheck, Send, User, Bot, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useAuth, getCustomerId } from '@/lib/auth'
+import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/lib/auth'
 import { useCustomerCases, useAnswerQuestion, useSubmitCase } from '@/lib/resolvesphereApi'
 
 type Message = {
@@ -22,11 +23,11 @@ const quickActions = [
 
 const CustomerChat = () => {
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
-  const customerId = getCustomerId(user)
+  const { user, customerId, signOut } = useAuth()
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string>('Billing')
   const [isTyping, setIsTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -58,7 +59,7 @@ const CustomerChat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const handleSend = async (text: string, category?: string) => {
+  const handleSend = async (text: string) => {
     if (!text.trim() || !customerId) return
     const userMessage: Message = { id: `u-${Date.now()}`, role: 'user', content: text.trim(), timestamp: new Date().toISOString() }
     setMessages((prev) => [...prev, userMessage])
@@ -67,7 +68,7 @@ const CustomerChat = () => {
 
     if (!activeCaseId) {
       submitCase.mutate(
-        { customer_id: customerId, complaint: text.trim(), category: category ?? 'Billing' },
+        { customer_id: customerId, complaint: text.trim(), category: selectedCategory },
         {
           onSuccess: (data) => {
             setActiveCaseId(data.result.case_id)
@@ -154,7 +155,7 @@ const CustomerChat = () => {
               <p className="mb-2 text-sm font-medium">Quick actions</p>
               <div className="flex flex-wrap gap-2">
                 {quickActions.map((btn) => (
-                  <Button key={btn.label} variant="outline" size="sm" onClick={() => handleSend(btn.text, btn.category)}>{btn.label}</Button>
+                  <Button key={btn.label} variant="outline" size="sm" onClick={() => { setInput(btn.text); setSelectedCategory(btn.category) }}>{btn.label}</Button>
                 ))}
               </div>
             </div>
@@ -202,12 +203,12 @@ const CustomerChat = () => {
               )}
               <div className="flex flex-wrap gap-2">
                 {quickActions.map((btn) => (
-                  <Button key={btn.label} variant="outline" size="sm" onClick={() => handleSend(btn.text, btn.category)}>{btn.label}</Button>
+                  <Button key={btn.label} variant="outline" size="sm" onClick={() => { setInput(btn.text); setSelectedCategory(btn.category) }}>{btn.label}</Button>
                 ))}
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleSend(input) }} className="flex gap-2">
-                <Input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Type your message..." className="flex-1" />
-                <Button type="submit" disabled={!input.trim() || isTyping}><Send className="h-4 w-4" /></Button>
+                <Textarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="Describe your issue..." className="flex-1 min-h-[60px]" rows={2} />
+                <Button type="submit" disabled={!input.trim() || isTyping} className="self-end"><Send className="h-4 w-4" /></Button>
               </form>
             </div>
           </div>

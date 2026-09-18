@@ -8,6 +8,7 @@ type AuthContextType = {
   user: User | null
   session: Session | null
   role: Role | null
+  customerId: string | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string, role: Role) => Promise<{ error: Error | null }>
@@ -32,24 +33,45 @@ function resolveRole(user: User | null): Role | null {
   return DEMO_ACCOUNTS[email]?.role ?? 'customer'
 }
 
+async function resolveCustomerId(user: User | null): Promise<string | null> {
+  if (!user) return null
+  const email = user.email ?? ''
+  const metadataCustomerId = user.user_metadata?.customer_id
+  if (metadataCustomerId) return metadataCustomerId
+  if (DEMO_ACCOUNTS[email]?.customer_id) return DEMO_ACCOUNTS[email].customer_id
+
+  try {
+    const { data, error } = await supabase.functions.invoke('resolvesphere-engine', {
+      body: { action: 'get_or_create_customer', auth_user_id: user.id, email, name: user.user_metadata?.name }
+    })
+    if (error || !data?.ok) return null
+    return data.customer_id
+  } catch {
+    return null
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [role, setRole] = useState<Role | null>(null)
+  const [customerId, setCustomerId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       setRole(resolveRole(session?.user ?? null))
+      setCustomerId(await resolveCustomerId(session?.user ?? null))
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
       setRole(resolveRole(session?.user ?? null))
+      setCustomerId(await resolveCustomerId(session?.user ?? null))
     })
 
     return () => subscription.unsubscribe()
@@ -73,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
-  const value = { user, session, role, loading, signIn, signUp, signOut }
+  const value = { user, session, role, customerId, loading, signIn, signUp, signOut }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
@@ -82,14 +104,6 @@ export function useAuth() {
   const context = useContext(AuthContext)
   if (!context) throw new Error('useAuth must be used within AuthProvider')
   return context
-}
-
-export function getCustomerId(user: User | null): string | null {
-  if (!user) return null
-  const email = user.email ?? ''
-  const metadataCustomerId = user.user_metadata?.customer_id
-  if (metadataCustomerId) return metadataCustomerId
-  return DEMO_ACCOUNTS[email]?.customer_id ?? null
 }
 
 export function getUserRole(user: User | null): Role | null {

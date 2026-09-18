@@ -15,9 +15,23 @@ const Signup = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const validatePassword = (pwd: string): string | null => {
+    if (pwd.length < 8) return 'Password must be at least 8 characters'
+    if (!/[a-zA-Z]/.test(pwd)) return 'Password must contain at least one letter'
+    if (!/[0-9]/.test(pwd)) return 'Password must contain at least one number'
+    return null
+  }
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    const pwdError = validatePassword(password)
+    if (pwdError) {
+      setError(pwdError)
+      return
+    }
+
     setLoading(true)
     const { error } = await signUp(email, password, 'customer')
     setLoading(false)
@@ -55,7 +69,8 @@ const Signup = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters with letters and numbers" required />
+              <p className="text-xs text-muted-foreground">Must be at least 8 characters with letters and numbers</p>
             </div>
 
             {error && <p className="text-sm text-destructive">{error}</p>}

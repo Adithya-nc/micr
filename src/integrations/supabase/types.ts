@@ -3990,18 +3990,21 @@ export type Database = {
       }
       rs_synthetic_customers: {
         Row: {
+          auth_user_id: string | null
           customer_id: string
           email: string | null
           label: string
           name: string | null
         }
         Insert: {
+          auth_user_id?: string | null
           customer_id: string
           email?: string | null
           label?: string
           name?: string | null
         }
         Update: {
+          auth_user_id?: string | null
           customer_id?: string
           email?: string | null
           label?: string

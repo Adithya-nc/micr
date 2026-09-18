@@ -197,3 +197,10 @@ export function useRejectAction() {
     },
   })
 }
+
+export function useGetOrCreateCustomer() {
+  return useMutation({
+    mutationFn: (input: { auth_user_id: string; email: string; name?: string }) =>
+      invokeEngine<{ ok: boolean; customer_id: string }>('get_or_create_customer', input),
+  })
+}

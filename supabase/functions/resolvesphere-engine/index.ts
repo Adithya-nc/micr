@@ -801,6 +801,20 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, case_id } = body;
 
+    if (action === "get_or_create_customer") {
+      const { auth_user_id, email, name } = body;
+      if (!auth_user_id || !email) {
+        return new Response(JSON.stringify({ ok: false, error: "auth_user_id and email required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: existing } = await engine.supabase.from("rs_synthetic_customers").select("customer_id").eq("auth_user_id", auth_user_id).maybeSingle();
+      if (existing) {
+        return new Response(JSON.stringify({ ok: true, customer_id: existing.customer_id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const customerId = `CUST-${Date.now().toString().slice(-6)}`;
+      await engine.supabase.from("rs_synthetic_customers").insert({ customer_id, auth_user_id, name: name ?? email.split('@')[0], email, label: 'CUSTOMER' });
+      return new Response(JSON.stringify({ ok: true, customer_id: customerId }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (action === "submit_case") {
       const result = await engine.submitCase(body.input ?? body);
       if (result.next === "autonomous") {
