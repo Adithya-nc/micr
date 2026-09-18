@@ -87,15 +87,19 @@ const CommandCenter = () => {
       subtitle="Don't answer the ticket. Resolve the case."
       actions={<Button asChild size="sm"><Link to="/submit">New request</Link></Button>}
     >
-      <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {counters.map((counter) => (
-            <div key={counter.label} className="rounded-lg border bg-card p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{counter.label}</p>
-              <p className="mt-1 text-2xl font-semibold">{isLoading ? <Skeleton className="h-7 w-10" /> : cases.filter((c) => counter.match(c.status)).length}</p>
-            </div>
-          ))}
-        </div>
+      <div key={counter.label} className="rounded-lg border bg-card p-4">
+  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+    {counter.label}
+  </p>
+
+  <div className="mt-1 text-2xl font-semibold">
+    {isLoading ? (
+      <Skeleton className="h-7 w-10" />
+    ) : (
+      cases.filter((c) => counter.match(c.status)).length
+    )}
+  </div>
+</div>
         <section className="rounded-lg border bg-card">
           <header className="border-b px-4 py-3"><h2 className="text-sm font-semibold">Case queue</h2></header>
           <CaseTable cases={cases} isLoading={isLoading} isError={isError} />
