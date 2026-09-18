@@ -1,6 +1,7 @@
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import Login from './pages/Login'
+import Signup from './pages/Signup'
 import Submit from './pages/Submit'
 import CustomerChat from './pages/CustomerChat'
 import Terms from './pages/Terms'
@@ -21,6 +22,7 @@ import Testing from './pages/app/Testing'
 export const routers = [
   { path: '/', name: 'landing', element: <Index /> },
   { path: '/login', name: 'login', element: <Login /> },
+  { path: '/signup', name: 'signup', element: <Signup /> },
   { path: '/submit', name: 'submit', element: <Submit /> },
   { path: '/chat', name: 'customer-chat', element: <CustomerChat /> },
   { path: '/app', name: 'dashboard', element: <CommandCenter /> },

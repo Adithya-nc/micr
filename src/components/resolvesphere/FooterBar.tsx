@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
-import { useDemoAuth } from '@/lib/demoAuth'
+import { useAuth } from '@/lib/auth'
 
 export function FooterBar() {
-  const { role } = useDemoAuth()
+  const { role } = useAuth()
   return (
     <footer className="border-t bg-card px-5 py-3">
       <nav aria-label="Secondary" className="flex flex-wrap gap-4 text-xs text-muted-foreground">

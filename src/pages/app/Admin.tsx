@@ -1,17 +1,8 @@
 import { AppShell } from '@/components/resolvesphere/AppShell'
 import { BackendStatusPanel } from '@/components/resolvesphere/BackendStatusPanel'
-import { StatusBadge } from '@/components/resolvesphere/StatusBadge'
-import { roleLabels } from '@/lib/demoAuth'
 import { useEventLog } from '@/lib/resolvesphereApi'
 
 type EventRow = { event_id: string; case_id: string; event_type: string; created_at: string }
-
-const roleOverview: { role: keyof typeof roleLabels; access: string }[] = [
-  { role: 'customer', access: 'Landing page and demo complaint submission only' },
-  { role: 'support_agent', access: 'Command Center, Active Case, Escalations, Approvals' },
-  { role: 'manager', access: 'Support Agent pages plus Root-Cause Radar' },
-  { role: 'admin', access: 'All pages including Testing/Admin and Backend Status' },
-]
 
 const Admin = () => {
   const { data, isLoading } = useEventLog()
@@ -21,18 +12,6 @@ const Admin = () => {
     <AppShell page="testing" title="Admin Dashboard">
       <div className="space-y-4">
         <BackendStatusPanel />
-        <section className="rounded-lg border bg-card p-5">
-          <h2 className="text-sm font-semibold">Role and access overview</h2>
-          <ul className="mt-3 divide-y text-sm">
-            {roleOverview.map((r) => (
-              <li key={r.role} className="flex items-center justify-between py-2">
-                <span className="font-medium">{roleLabels[r.role]}</span>
-                <span className="text-xs text-muted-foreground">{r.access}</span>
-              </li>
-            ))}
-          </ul>
-          <StatusBadge value="[DEMO AUTH FALLBACK]" tone="warning" />
-        </section>
         <section className="rounded-lg border bg-card p-5">
           <h2 className="text-sm font-semibold">Event log</h2>
           {isLoading ? (

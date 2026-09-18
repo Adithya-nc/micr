@@ -17,6 +17,7 @@ Deno.serve(async (req) => {
     { email: "arjun@demo.com", password: "demo1234", role: "customer", customer_id: "CUST-1002" },
     { email: "agent@demo.com", password: "demo1234", role: "support_agent" },
     { email: "manager@demo.com", password: "demo1234", role: "manager" },
+    { email: "admin@demo.com", password: "demo1234", role: "admin" },
   ];
 
   const results = [];

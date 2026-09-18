@@ -1,17 +1,16 @@
 import { Link } from 'react-router-dom'
 import { AppShell } from '@/components/resolvesphere/AppShell'
-import { DemoAuthRoleSwitcher } from '@/components/resolvesphere/DemoAuthRoleSwitcher'
-import { useDemoAuth } from '@/lib/demoAuth'
+import { useAuth } from '@/lib/auth'
 
 const Settings = () => {
-  const { role } = useDemoAuth()
+  const { role, user } = useAuth()
   return (
     <AppShell page="command-center" title="Settings">
       <div className="space-y-4">
         <section className="rounded-lg border bg-card p-5">
-          <h2 className="text-sm font-semibold">Workspace access</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Your current role controls which queues and actions are available.</p>
-          <div className="mt-3"><DemoAuthRoleSwitcher /></div>
+          <h2 className="text-sm font-semibold">Account</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Signed in as {user?.email}</p>
+          <p className="mt-1 text-sm text-muted-foreground">Role: {role}</p>
         </section>
         {role === 'admin' && (
           <section className="rounded-lg border bg-card p-5">

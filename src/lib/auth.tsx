@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { supabase } from '@/integrations/supabase/client'
 import type { User, Session } from '@supabase/supabase-js'
 
-type Role = 'customer' | 'support_agent' | 'manager'
+type Role = 'customer' | 'support_agent' | 'manager' | 'admin'
 
 type AuthContextType = {
   user: User | null
@@ -21,6 +21,15 @@ const DEMO_ACCOUNTS: Record<string, { password: string; role: Role; customer_id?
   'arjun@demo.com': { password: 'demo1234', role: 'customer', customer_id: 'CUST-1002' },
   'agent@demo.com': { password: 'demo1234', role: 'support_agent' },
   'manager@demo.com': { password: 'demo1234', role: 'manager' },
+  'admin@demo.com': { password: 'demo1234', role: 'admin' },
+}
+
+function resolveRole(user: User | null): Role | null {
+  if (!user) return null
+  const email = user.email ?? ''
+  const metadataRole = user.user_metadata?.role
+  if (metadataRole === 'support_agent' || metadataRole === 'manager' || metadataRole === 'admin') return metadataRole
+  return DEMO_ACCOUNTS[email]?.role ?? 'customer'
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -33,22 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
-      if (session?.user) {
-        const email = session.user.email ?? ''
-        setRole(DEMO_ACCOUNTS[email]?.role ?? 'customer')
-      }
+      setRole(resolveRole(session?.user ?? null))
       setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
-      if (session?.user) {
-        const email = session.user.email ?? ''
-        setRole(DEMO_ACCOUNTS[email]?.role ?? 'customer')
-      } else {
-        setRole(null)
-      }
+      setRole(resolveRole(session?.user ?? null))
     })
 
     return () => subscription.unsubscribe()
@@ -86,7 +87,17 @@ export function useAuth() {
 export function getCustomerId(user: User | null): string | null {
   if (!user) return null
   const email = user.email ?? ''
+  const metadataCustomerId = user.user_metadata?.customer_id
+  if (metadataCustomerId) return metadataCustomerId
   return DEMO_ACCOUNTS[email]?.customer_id ?? null
+}
+
+export function getUserRole(user: User | null): Role | null {
+  if (!user) return null
+  const email = user.email ?? ''
+  const metadataRole = user.user_metadata?.role
+  if (metadataRole === 'support_agent' || metadataRole === 'manager') return metadataRole
+  return DEMO_ACCOUNTS[email]?.role ?? 'customer'
 }
 
 export const demoAccounts = DEMO_ACCOUNTS

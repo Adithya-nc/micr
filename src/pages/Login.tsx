@@ -82,10 +82,11 @@ const Login = () => {
             <p className="text-[10px] text-muted-foreground">Password: demo1234</p>
           </div>
 
-          <div className="border-t pt-4 text-center">
-            <Link to="/chat" className="text-sm text-primary hover:underline">
-              Customer support chat →
-            </Link>
+          <div className="border-t pt-4 text-center text-sm">
+            <span className="text-muted-foreground">No account? </span>
+            <Link to="/signup" className="text-primary hover:underline">Create one</Link>
+            <span className="mx-2 text-muted-foreground">·</span>
+            <Link to="/chat" className="text-primary hover:underline">Customer chat →</Link>
           </div>
         </div>
       </main>
