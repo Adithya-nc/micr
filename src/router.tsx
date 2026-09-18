@@ -1,6 +1,7 @@
 import Index from './pages/Index'
 import NotFound from './pages/NotFound'
 import Login from './pages/Login'
+import Submit from './pages/Submit'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import ErrorPage from './pages/Error'
@@ -9,23 +10,28 @@ import CaseList from './pages/app/CaseList'
 import ActiveCase from './pages/app/ActiveCase'
 import Escalations from './pages/app/Escalations'
 import Approvals from './pages/app/Approvals'
-import Radar from './pages/app/Radar'
-import Testing from './pages/app/Testing'
+import KnowledgeBase from './pages/app/KnowledgeBase'
+import Analytics from './pages/app/Analytics'
+import Settings from './pages/app/Settings'
 import Admin from './pages/app/Admin'
 import Status from './pages/app/Status'
+import Testing from './pages/app/Testing'
 
 export const routers = [
   { path: '/', name: 'landing', element: <Index /> },
   { path: '/login', name: 'login', element: <Login /> },
-  { path: '/app', name: 'command-center', element: <CommandCenter /> },
+  { path: '/submit', name: 'submit', element: <Submit /> },
+  { path: '/app', name: 'dashboard', element: <CommandCenter /> },
   { path: '/app/cases', name: 'case-list', element: <CaseList /> },
   { path: '/app/cases/:caseId', name: 'active-case', element: <ActiveCase /> },
   { path: '/escalations', name: 'escalations', element: <Escalations /> },
   { path: '/approvals', name: 'approvals', element: <Approvals /> },
-  { path: '/radar', name: 'radar', element: <Radar /> },
-  { path: '/testing', name: 'testing', element: <Testing /> },
+  { path: '/knowledge', name: 'knowledge', element: <KnowledgeBase /> },
+  { path: '/radar', name: 'analytics', element: <Analytics /> },
+  { path: '/settings', name: 'settings', element: <Settings /> },
   { path: '/admin', name: 'admin', element: <Admin /> },
-  { path: '/status', name: 'status', element: <Status /> },
+  { path: '/admin/backend', name: 'admin-backend', element: <Status /> },
+  { path: '/admin/testing', name: 'admin-testing', element: <Testing /> },
   { path: '/terms', name: 'terms', element: <Terms /> },
   { path: '/privacy', name: 'privacy', element: <Privacy /> },
   { path: '/error', name: 'error', element: <ErrorPage /> },

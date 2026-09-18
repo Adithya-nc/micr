@@ -1,0 +1,2 @@
+alter table public.rs_cases add column if not exists category text, add column if not exists reference_id text, add column if not exists assigned_agent text, add column if not exists root_cause text, add column if not exists customer_response text, add column if not exists customer_email text, add column if not exists customer_name text;
+alter table public.rs_synthetic_customers add column if not exists email text;

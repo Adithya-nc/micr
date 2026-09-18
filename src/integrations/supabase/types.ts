@@ -3553,11 +3553,16 @@ export type Database = {
       rs_cases: {
         Row: {
           action_status: string | null
+          assigned_agent: string | null
           authorization_state: string | null
           case_id: string
+          category: string | null
           created_at: string
           current_stage: string | null
+          customer_email: string | null
           customer_id: string
+          customer_name: string | null
+          customer_response: string | null
           domain: string[] | null
           escalation_reason: string | null
           final_state: string | null
@@ -3565,8 +3570,10 @@ export type Database = {
           parent_case_id: string | null
           primary_intent: string | null
           raw_complaint: string
+          reference_id: string | null
           reopened_count: number
           risk_level: string | null
+          root_cause: string | null
           secondary_intent: string | null
           sentiment: string | null
           sla_state: string | null
@@ -3578,11 +3585,16 @@ export type Database = {
         }
         Insert: {
           action_status?: string | null
+          assigned_agent?: string | null
           authorization_state?: string | null
           case_id: string
+          category?: string | null
           created_at?: string
           current_stage?: string | null
+          customer_email?: string | null
           customer_id: string
+          customer_name?: string | null
+          customer_response?: string | null
           domain?: string[] | null
           escalation_reason?: string | null
           final_state?: string | null
@@ -3590,8 +3602,10 @@ export type Database = {
           parent_case_id?: string | null
           primary_intent?: string | null
           raw_complaint: string
+          reference_id?: string | null
           reopened_count?: number
           risk_level?: string | null
+          root_cause?: string | null
           secondary_intent?: string | null
           sentiment?: string | null
           sla_state?: string | null
@@ -3603,11 +3617,16 @@ export type Database = {
         }
         Update: {
           action_status?: string | null
+          assigned_agent?: string | null
           authorization_state?: string | null
           case_id?: string
+          category?: string | null
           created_at?: string
           current_stage?: string | null
+          customer_email?: string | null
           customer_id?: string
+          customer_name?: string | null
+          customer_response?: string | null
           domain?: string[] | null
           escalation_reason?: string | null
           final_state?: string | null
@@ -3615,8 +3634,10 @@ export type Database = {
           parent_case_id?: string | null
           primary_intent?: string | null
           raw_complaint?: string
+          reference_id?: string | null
           reopened_count?: number
           risk_level?: string | null
+          root_cause?: string | null
           secondary_intent?: string | null
           sentiment?: string | null
           sla_state?: string | null
@@ -3970,16 +3991,19 @@ export type Database = {
       rs_synthetic_customers: {
         Row: {
           customer_id: string
+          email: string | null
           label: string
           name: string | null
         }
         Insert: {
           customer_id: string
+          email?: string | null
           label?: string
           name?: string | null
         }
         Update: {
           customer_id?: string
+          email?: string | null
           label?: string
           name?: string | null
         }

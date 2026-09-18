@@ -31,7 +31,7 @@ const DemoAuthContext = createContext<{ role: DemoRole; setRole: (role: DemoRole
 export function DemoAuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<DemoRole>(() => {
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null
-    return stored === 'customer' || stored === 'support_agent' || stored === 'manager' || stored === 'admin' ? stored : 'customer'
+    return stored === 'customer' || stored === 'support_agent' || stored === 'manager' || stored === 'admin' ? stored : 'support_agent'
   })
   useEffect(() => { window.localStorage.setItem(STORAGE_KEY, role) }, [role])
   const value = useMemo(() => ({ role, setRole }), [role])
