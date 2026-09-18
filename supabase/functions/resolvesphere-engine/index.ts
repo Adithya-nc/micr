@@ -214,18 +214,18 @@ class Engine {
     if (payment) {
       const id = `EV-${crypto.randomUUID().slice(0, 8)}`;
       evidenceIds.push(id);
-      await this.insertEvidence({ evidence_id: id, case_id: caseId, source_system: "Payment System", source_record_id: payment.payment_id, source_type: "TRANSACTIONAL", field_name: "payment_status", value: JSON.stringify(payment.status), authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_payment", relevance: "Confirms whether the customer was charged", status: "ACTIVE" });
+      await this.insertEvidence({ evidence_id: id, case_id: caseId, source_system: "Payment System", source_record_id: payment.payment_id, source_type: "TRANSACTIONAL", field_name: "payment_status", value: payment.status, authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_payment", relevance: "Confirms whether the customer was charged", status: "ACTIVE" });
       await this.handoff(caseId, routed.specialist, "Billing & Payments Agent", `Requested payment context for ${payment.payment_id}`);
     }
     if (order) {
       const id = `EV-${crypto.randomUUID().slice(0, 8)}`;
       evidenceIds.push(id);
-      await this.insertEvidence({ evidence_id: id, case_id: caseId, source_system: "Order System", source_record_id: order.order_id, source_type: "TRANSACTIONAL", field_name: "order_status", value: JSON.stringify(order.status), authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_order", relevance: "Confirms whether fulfilment completed", status: "ACTIVE" });
+      await this.insertEvidence({ evidence_id: id, case_id: caseId, source_system: "Order System", source_record_id: order.order_id, source_type: "TRANSACTIONAL", field_name: "order_status", value: order.status, authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_order", relevance: "Confirms whether fulfilment completed", status: "ACTIVE" });
     }
     if (refund) {
       const id = `EV-${crypto.randomUUID().slice(0, 8)}`;
       evidenceIds.push(id);
-      await this.insertEvidence({ evidence_id: id, case_id: caseId, source_system: "Refund System", source_record_id: refund.refund_id, source_type: "TRANSACTIONAL", field_name: "refund_status", value: JSON.stringify(refund.status), authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_refund", relevance: "Confirms refund progress", status: "ACTIVE" });
+      await this.insertEvidence({ evidence_id: id, case_id: caseId, source_system: "Refund System", source_record_id: refund.refund_id, source_type: "TRANSACTIONAL", field_name: "refund_status", value: refund.status, authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_refund", relevance: "Confirms refund progress", status: "ACTIVE" });
     }
     if (evidenceIds.length) {
       await this.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: caseId, event_type: "EVIDENCE_RETRIEVED", payload: { evidence_ids: evidenceIds } });
@@ -303,8 +303,8 @@ class Engine {
       evPay = (existing ?? []).find((e) => e.field_name === "payment_status")?.evidence_id ?? evPay;
       evOrd = (existing ?? []).find((e) => e.field_name === "order_status")?.evidence_id ?? evOrd;
     } else {
-      await this.insertEvidence({ evidence_id: evPay, case_id: caseId, source_system: "Payment System", source_record_id: payment.payment_id, source_type: "TRANSACTIONAL", field_name: "payment_status", value: JSON.stringify(payment.status), authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_payment", relevance: "Confirms the customer was charged", status: "ACTIVE" });
-      await this.insertEvidence({ evidence_id: evOrd, case_id: caseId, source_system: "Order System", source_record_id: order.order_id, source_type: "TRANSACTIONAL", field_name: "order_status", value: JSON.stringify(order.status), authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_order", relevance: "Confirms fulfilment failed", status: "ACTIVE" });
+      await this.insertEvidence({ evidence_id: evPay, case_id: caseId, source_system: "Payment System", source_record_id: payment.payment_id, source_type: "TRANSACTIONAL", field_name: "payment_status", value: payment.status, authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_payment", relevance: "Confirms the customer was charged", status: "ACTIVE" });
+      await this.insertEvidence({ evidence_id: evOrd, case_id: caseId, source_system: "Order System", source_record_id: order.order_id, source_type: "TRANSACTIONAL", field_name: "order_status", value: order.status, authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_order", relevance: "Confirms fulfilment failed", status: "ACTIVE" });
       await this.supabase.from("rs_case_events").insert({ event_id: crypto.randomUUID(), case_id: caseId, event_type: "EVIDENCE_RETRIEVED", payload: { evidence_ids: [evPay, evOrd] } });
       await this.knowledge(caseId, ["POL-001", "POL-005"]);
     }
@@ -448,7 +448,7 @@ class Engine {
     const now = new Date().toISOString();
     const { data: refund } = await this.supabase.from("rs_synthetic_refunds").select("*").eq("refund_id", "REF-9002").single();
     const evRef = `EV-${crypto.randomUUID().slice(0, 8)}`;
-    await this.insertEvidence({ evidence_id: evRef, case_id: caseId, source_system: "Refund System", source_record_id: refund.refund_id, source_type: "TRANSACTIONAL", field_name: "refund_status", value: JSON.stringify(refund.status), authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_refund", relevance: "refund confirmation status", status: "ACTIVE" });
+    await this.insertEvidence({ evidence_id: evRef, case_id: caseId, source_system: "Refund System", source_record_id: refund.refund_id, source_type: "TRANSACTIONAL", field_name: "refund_status", value: refund.status, authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_refund", relevance: "refund confirmation status", status: "ACTIVE" });
     await this.handoff(caseId, "Billing & Payments Agent", "Knowledge & Policy Agent", "Checked refund policy before contacting the customer");
     await this.knowledge(caseId, ["POL-007"]);
 
@@ -485,8 +485,8 @@ class Engine {
     const { data: refund } = await this.supabase.from("rs_synthetic_refunds").select("*").eq("refund_id", "REF-9003").single();
     const evPayment = `EV-${crypto.randomUUID().slice(0, 8)}`;
     const evSupport = `EV-${crypto.randomUUID().slice(0, 8)}`;
-    await this.insertEvidence({ evidence_id: evPayment, case_id: caseId, source_system: "Payment System", source_record_id: refund.refund_id, source_type: "TRANSACTIONAL", field_name: "refund_status", value: JSON.stringify(refund.status), authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_refund", relevance: "payment system refund status", status: "CONTRADICTED" });
-    await this.insertEvidence({ evidence_id: evSupport, case_id: caseId, source_system: "Support System", source_record_id: refund.refund_id, source_type: "SUPPORT", field_name: "refund_status", value: JSON.stringify(refund.support_status), authority_level: "SECONDARY", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_ticket", relevance: "support system refund status", status: "CONTRADICTED" });
+    await this.insertEvidence({ evidence_id: evPayment, case_id: caseId, source_system: "Payment System", source_record_id: refund.refund_id, source_type: "TRANSACTIONAL", field_name: "refund_status", value: refund.status, authority_level: "AUTHORITATIVE", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_refund", relevance: "payment system refund status", status: "CONTRADICTED" });
+    await this.insertEvidence({ evidence_id: evSupport, case_id: caseId, source_system: "Support System", source_record_id: refund.refund_id, source_type: "SUPPORT", field_name: "refund_status", value: refund.support_status, authority_level: "SECONDARY", observed_at: now, retrieved_at: now, freshness_status: "FRESH", retrieval_method: "get_ticket", relevance: "support system refund status", status: "CONTRADICTED" });
     await this.handoff(caseId, "Billing & Payments Agent", "Orders & Fulfillment Agent", "Cross-checked refund record across support and payment systems");
     await this.handoff(caseId, "Orders & Fulfillment Agent", "Billing & Payments Agent", `Support system reports ${refund.support_status}, payment system reports ${refund.status}`);
     await this.knowledge(caseId, ["POL-004"]);
