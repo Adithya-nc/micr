@@ -39,12 +39,12 @@ const Signup = () => {
     }
 
     setLoading(true)
-    const { error } = await signUp(email, password, 'customer')
-    setLoading(false)
-    if (error) {
-      setError(error.message)
-    }
-  }
+    const { error } = await signUp(
+  email,
+  password,
+  'customer',
+  name
+)
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
