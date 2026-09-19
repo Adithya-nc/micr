@@ -1,101 +1,299 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ShieldCheck } from 'lucide-react'
+
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAuth, demoAccounts } from '@/lib/auth'
+import {
+  useAuth,
+  demoAccounts,
+} from '@/lib/auth'
 
-const Login = () => {
+export default function Login() {
   const navigate = useNavigate()
-  const { signIn, user } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
 
-  React.useEffect(() => {
-    if (user) {
-      navigate('/app', { replace: true })
-    }
-  }, [user, navigate])
+  const { signIn } = useAuth()
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const [email, setEmail] =
+    useState('')
+
+  const [password, setPassword] =
+    useState('')
+
+  const [error, setError] =
+    useState('')
+
+  const [loading, setLoading] =
+    useState(false)
+
+  const handleSignIn = async (
+    event: React.FormEvent
+  ) => {
+    event.preventDefault()
+
     setError('')
     setLoading(true)
-    const { error } = await signIn(email, password)
+
+    const result =
+      await signIn(email, password)
+
     setLoading(false)
-    if (error) {
-      setError(error.message)
+
+    if (result.error) {
+      setError(result.error.message)
+      return
     }
+
+    navigate('/app')
   }
 
-  const fillDemo = (demoEmail: string) => {
+  const fillDemo = (
+    demoEmail: string
+  ) => {
+    const account =
+      demoAccounts[demoEmail]
+
+    if (!account) return
+
     setEmail(demoEmail)
-    setPassword(demoAccounts[demoEmail].password)
+    setPassword(account.password)
+    setError('')
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b bg-card px-5 py-4">
-        <Link to="/" className="mx-auto flex max-w-md items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-primary" />
-          <span className="font-semibold">ResolveSphere AI</span>
-        </Link>
-      </header>
+    <div className="min-h-screen bg-[#f7f9fc] dark:bg-slate-950">
+      <div className="grid min-h-screen lg:grid-cols-[1fr_0.85fr]">
 
-      <main className="mx-auto flex w-full max-w-md flex-1 items-center px-5 py-10">
-        <div className="w-full space-y-6 rounded-lg border bg-card p-6">
-          <div>
-            <h1 className="text-xl font-semibold">Sign in</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Access your support workspace</p>
+        {/* BRAND PANEL */}
+        <div className="relative hidden overflow-hidden bg-slate-950 text-white lg:flex lg:flex-col lg:justify-between">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(37,99,235,.28),transparent_35%)]" />
+
+          <div className="relative p-10">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-3"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-950">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+
+              <span className="text-sm font-bold">
+                ResolveSphere
+              </span>
+            </Link>
           </div>
 
-          <form onSubmit={handleSignIn} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+          <div className="relative max-w-xl px-10 pb-16">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-blue-200">
+              <Sparkles className="h-3.5 w-3.5" />
+              AI Resolution Platform
             </div>
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            <h1 className="text-5xl font-black leading-tight tracking-tight">
+              Resolve customer
+              <br />
+              problems with
+              <span className="text-blue-400">
+                evidence.
+              </span>
+            </h1>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
-            </Button>
-          </form>
+            <p className="mt-6 leading-7 text-slate-400">
+              Investigate. Decide. Act. Verify.
+              A controlled workflow for modern
+              customer operations.
+            </p>
 
-          <div className="space-y-2 border-t pt-4">
-            <p className="text-xs font-medium text-muted-foreground">Demo accounts</p>
-            <div className="space-y-1">
-              {Object.entries(demoAccounts).map(([email, info]) => (
-                <button
-                  key={email}
-                  onClick={() => fillDemo(email)}
-                  className="flex w-full items-center justify-between rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+            <div className="mt-8 space-y-3">
+              {[
+                'Evidence-driven investigation',
+                'Policy-gated actions',
+                'Human escalation',
+                'Verified resolution',
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="flex items-center gap-2 text-sm text-slate-300"
                 >
-                  <span>{email}</span>
-                  <span className="capitalize">{info.role.replace('_', ' ')}</span>
-                </button>
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  {item}
+                </div>
               ))}
             </div>
-            <p className="text-[10px] text-muted-foreground">Password: demo1234</p>
           </div>
 
-          <div className="border-t pt-4 text-center text-sm">
-            <span className="text-muted-foreground">No account? </span>
-            <Link to="/signup" className="text-primary hover:underline">Create one</Link>
-            <span className="mx-2 text-muted-foreground">·</span>
-            <Link to="/chat" className="text-primary hover:underline">Customer chat →</Link>
+          <div className="relative border-t border-white/10 px-10 py-5 text-xs text-slate-500">
+            ResolveSphere AI · Operational Intelligence
           </div>
         </div>
-      </main>
+
+        {/* FORM */}
+        <div className="flex min-h-screen flex-col">
+          <header className="flex items-center justify-between px-5 py-5 sm:px-8">
+            <Link
+              to="/"
+              className="flex items-center gap-2 text-sm font-bold lg:hidden"
+            >
+              <ShieldCheck className="h-5 w-5" />
+              ResolveSphere
+            </Link>
+
+            <Link
+              to="/"
+              className="ml-auto flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-950 dark:hover:text-white"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to home
+            </Link>
+          </header>
+
+          <main className="flex flex-1 items-center justify-center px-5 py-10">
+            <div className="w-full max-w-md">
+
+              <div className="mb-8">
+                <p className="section-label">
+                  Secure workspace
+                </p>
+
+                <h2 className="mt-3 text-3xl font-black tracking-tight">
+                  Welcome back
+                </h2>
+
+                <p className="mt-2 text-sm text-slate-500">
+                  Sign in to continue to your resolution workspace.
+                </p>
+              </div>
+
+              <form
+                onSubmit={handleSignIn}
+                className="space-y-5"
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="email">
+                    Email address
+                  </Label>
+
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(event) =>
+                      setEmail(event.target.value)
+                    }
+                    placeholder="you@example.com"
+                    className="h-11 rounded-xl"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">
+                      Password
+                    </Label>
+
+                    <span className="text-[10px] font-medium text-slate-400">
+                      Secure authentication
+                    </span>
+                  </div>
+
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(event) =>
+                      setPassword(event.target.value)
+                    }
+                    placeholder="Enter your password"
+                    className="h-11 rounded-xl"
+                    required
+                  />
+                </div>
+
+                {error && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="h-11 w-full rounded-xl bg-slate-950 font-bold hover:bg-slate-800 dark:bg-white dark:text-slate-950"
+                >
+                  {loading
+                    ? 'Signing in...'
+                    : 'Sign in'}
+
+                  {!loading && (
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  )}
+                </Button>
+              </form>
+
+              <div className="my-8 flex items-center gap-3">
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Demo access
+                </span>
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+              </div>
+
+              <div className="space-y-2">
+                {Object.entries(
+                  demoAccounts
+                ).map(([demoEmail, info]) => (
+                  <button
+                    key={demoEmail}
+                    type="button"
+                    onClick={() =>
+                      fillDemo(demoEmail)
+                    }
+                    className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50/50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-800"
+                  >
+                    <div>
+                      <p className="text-xs font-bold">
+                        {demoEmail}
+                      </p>
+
+                      <p className="mt-0.5 text-[10px] capitalize text-slate-400">
+                        {info.role.replace(
+                          '_',
+                          ' '
+                        )}
+                      </p>
+                    </div>
+
+                    <ArrowRight className="h-4 w-4 text-slate-400" />
+                  </button>
+                ))}
+              </div>
+
+              <p className="mt-4 text-center text-[10px] text-slate-400">
+                Demo password: demo1234
+              </p>
+
+              <p className="mt-8 text-center text-sm text-slate-500">
+                Don't have an account?{' '}
+                <Link
+                  to="/signup"
+                  className="font-bold text-blue-600 hover:underline"
+                >
+                  Create account
+                </Link>
+              </p>
+            </div>
+          </main>
+        </div>
+      </div>
     </div>
   )
 }
-
-export default Login
