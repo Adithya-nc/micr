@@ -151,13 +151,17 @@ const CustomerChat = () => {
                 ))}
               </div>
             )}
-            <div className="mt-4 rounded-lg border bg-card p-4">
-              <p className="mb-2 text-sm font-medium">Quick actions</p>
+            <div className="mt-4 rounded-lg border bg-card p-4 space-y-3">
+              <p className="text-sm font-medium">How can we help?</p>
               <div className="flex flex-wrap gap-2">
                 {quickActions.map((btn) => (
                   <Button key={btn.label} variant="outline" size="sm" onClick={() => { setInput(btn.text); setSelectedCategory(btn.category) }}>{btn.label}</Button>
                 ))}
               </div>
+              <form onSubmit={(e) => { e.preventDefault(); handleSend(input) }} className="flex gap-2">
+                <Textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(input) } }} placeholder="Describe your issue..." className="flex-1 min-h-[72px]" rows={3} />
+                <Button type="submit" disabled={!input.trim() || isTyping} className="self-end"><Send className="h-4 w-4" /></Button>
+              </form>
             </div>
           </div>
         ) : (
@@ -207,7 +211,7 @@ const CustomerChat = () => {
                 ))}
               </div>
               <form onSubmit={(e) => { e.preventDefault(); handleSend(input) }} className="flex gap-2">
-                <Textarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="Describe your issue..." className="flex-1 min-h-[60px]" rows={2} />
+                <Textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(input) } }} placeholder="Describe your issue..." className="flex-1 min-h-[60px]" rows={2} />
                 <Button type="submit" disabled={!input.trim() || isTyping} className="self-end"><Send className="h-4 w-4" /></Button>
               </form>
             </div>
