@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,11 +8,17 @@ import { useAuth, demoAccounts } from '@/lib/auth'
 
 const Login = () => {
   const navigate = useNavigate()
-  const { signIn } = useAuth()
+  const { signIn, user } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  React.useEffect(() => {
+    if (user) {
+      navigate('/app', { replace: true })
+    }
+  }, [user, navigate])
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,8 +28,6 @@ const Login = () => {
     setLoading(false)
     if (error) {
       setError(error.message)
-    } else {
-      navigate('/app')
     }
   }
 

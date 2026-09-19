@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,12 +8,18 @@ import { useAuth } from '@/lib/auth'
 
 const Signup = () => {
   const navigate = useNavigate()
-  const { signUp } = useAuth()
+  const { signUp, user } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  React.useEffect(() => {
+    if (user) {
+      navigate('/chat', { replace: true })
+    }
+  }, [user, navigate])
 
   const validatePassword = (pwd: string): string | null => {
     if (pwd.length < 8) return 'Password must be at least 8 characters'
@@ -37,8 +43,6 @@ const Signup = () => {
     setLoading(false)
     if (error) {
       setError(error.message)
-    } else {
-      navigate('/chat')
     }
   }
 
